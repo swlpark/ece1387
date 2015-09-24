@@ -1,21 +1,22 @@
-CFLAGS?=-std=c99 -D_GNU_SOURCE -Wall -O2
+CC=g++
+CFLAGS=-c -Wall -O2
+LDFLAGS=-c -Wall -O2
+
+CPP_FILES:= $(wildcard src/*.cpp)
+OBJ_FILES:= $(patsubst src/%.cpp,bin/%.o,$(CPP_FILES))
+
 
 default: all
 
-all: bin bin/montecarlo bin/montecarlo_parallel
-
-report: report.pdf
+all: bin $(OBJ_FILES) maze_router
 
 bin:
 	mkdir bin
 
-bin/montecarlo bin/montecarlo_parallel: src/montecarlo.c
-	$(CC) $(CFLAGS) -o bin/montecarlo $<
-	$(CC) $(CFLAGS) -DPARALLEL -pthread -o bin/montecarlo_parallel $<
+maze_router: $(OBJ)
 
-report.pdf: report/report.tex
-	cd report && pdflatex report.tex && pdflatex report.tex
-	mv report/report.pdf report.pdf
+obj/%.o : src/%.cpp 
+	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
 	rm -r bin
