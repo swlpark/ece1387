@@ -19,12 +19,14 @@ struct NetCompByDistance {
 
 int main() {
     int                      g_size, ch_width = 0;
-    vector<vector<GridCell>> fpga_grid;
+
+    //Dikstra heap, used for Coarse-Routing
+    priority_queue<GridNet, vector<GridNet>, NetCompByDistance> netlist;
 
     //Dikstra heap, used for Coarse-Routing
     priority_queue<GridCell, vector<GridCell>> cr_heap;
 
-    //heap, used to extract the lowest-cost net
+    //Heap, used to extract the lowest-cost net
     priority_queue<GridNet, vector<GridNet>> dr_heap;
 
     //parse standard input
@@ -50,7 +52,7 @@ int main() {
 
         if (iss >> s_x >> s_y >> s_pin >> t_x >> t_y >> t_pin) {
             GridNet net(s_x, s_y, s_pin, t_x, t_y, t_pin);
-            dr_heap.push(net);
+            netlist.push(net);
         } else {
             stderr << "ERROR: Failed to parse a path definition... exiting...";
             exit(1);
