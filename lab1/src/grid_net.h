@@ -5,7 +5,7 @@
 using namespace std;
 
 class GridNet {
-        struct Vertex {
+        struct CrVertex {
            GridCell *v_ptr;
         };
  
@@ -21,14 +21,18 @@ class GridNet {
  
 
     public:
+        int s_net_id;
         GridNet();
         ~GridNet();
 
-        int getLinearDistance();
+        int getLineDistance();
 };
 
+GridNet() {
+}
 //return linear distance 
-int GridNet::getLinearDistance() {
+int GridNet::getLineDistance() {
     return sqrt(((pow(abs(m_target_x - m_source_x)), 2) + pow(abs(m_target_y - m_source_y), 2)));
 }
+
 

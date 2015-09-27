@@ -3,15 +3,32 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
-#include "fpga_cell.h"
+#include <queue>
+#include "grid_net.h"
+#include "grid_cell.h"
 
 using namespace std;
 
+struct NetCompByDistance {
+    public :
+       bool operator()(const GridNet &a, const GridNet &b) const{
+          return a.getLinearDistance() < b.getLinearDistance;    
+       } 
+}
+
+
 int main() {
-    string line;
-    int g_size, ch_width = 0;
+    int                      g_size, ch_width = 0;
     vector<vector<GridCell>> fpga_grid;
 
+    //Dikstra heap, used for Coarse-Routing
+    priority_queue<GridCell, vector<GridCell>> cr_heap;
+
+    //heap, used to extract the lowest-cost net
+    priority_queue<GridNet, vector<GridNet>> dr_heap;
+
+    //parse standard input
+    string line;
     while(getline(stdin, line)) {
         istringstream iss(line);
         if (!g_size) {
@@ -31,14 +48,16 @@ int main() {
 
         int s_x, s_y, s_pin, t_x, t_y, t_pin;
 
-        if (!(iss >> s_x >> s_y >> s_pin >> t_x >> t_y >> t_pin)) {
+        if (iss >> s_x >> s_y >> s_pin >> t_x >> t_y >> t_pin) {
+            GridNet net(s_x, s_y, s_pin, t_x, t_y, t_pin);
+            dr_heap.push(net);
+        } else {
             stderr << "ERROR: Failed to parse a path definition... exiting...";
             exit(1);
         }
 
     }
 
-    
     GridCell::CH_WIDTH = ch_width;
 
     int grid_dim = 2 * g_size + 1;
@@ -46,12 +65,13 @@ int main() {
 
     for (int i; i < grid_dim; ++i) {
         fpga_grid[i].reserve(grid_dim);
+
         for (int j; j< grid_dim; ++i) { 
-            //fpga_grid[i].push_back   (i, j);
-            //fpga_grid[i].emplace_back(i, j);
+            GridCell cell(i, j); 
+            fpga_grid[i].push_back(cell);
         }
     }
-    return 0;
 
+    return 0;
 }
 
