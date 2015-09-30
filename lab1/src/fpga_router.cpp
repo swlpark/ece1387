@@ -19,9 +19,8 @@ struct NetCompByDistance {
 
 int main() {
     int                      g_size, ch_width = 0;
-
-    //Dikstra heap, used for Coarse-Routing
-    priority_queue<GridNet, vector<GridNet>, NetCompByDistance> netlist;
+    //Global net-lists
+    priority_queue<GridNet, vector<GridNet>, NetCompByDistance> net_heap;
 
     //Dikstra heap, used for Coarse-Routing
     priority_queue<GridCell, vector<GridCell>> cr_heap;
@@ -67,7 +66,6 @@ int main() {
 
     for (int i; i < grid_dim; ++i) {
         fpga_grid[i].reserve(grid_dim);
-
         for (int j; j< grid_dim; ++i) { 
             GridCell cell(i, j); 
             fpga_grid[i].push_back(cell);
