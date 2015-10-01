@@ -17,6 +17,9 @@ struct NetCompByDistance {
        } 
 }
 
+struct NetCompByDistance {
+
+}
 
 int main() {
     int                      g_size, ch_width = 0;
@@ -60,6 +63,7 @@ int main() {
     GridCell::CH_WIDTH = ch_width;
     int grid_dim = 2 * g_size + 1;
 
+    buildFpgaGrid(grid_dim);
 
     return 0;
 }
