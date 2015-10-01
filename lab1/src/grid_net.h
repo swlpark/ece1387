@@ -5,8 +5,11 @@
 using namespace std;
 
 class GridNet {
-        struct CrVertex {
-           GridCell *v_ptr;
+        struct PathTree {
+           GridCell          *node_ptr;
+           vector<PathTree*> children;     
+           int               level;
+           int               level;
         };
  
         //Source to Target
@@ -22,6 +25,9 @@ class GridNet {
 
     public:
         int s_net_id;
+        int s_n_groups; //allowable sub-tree groups
+        int s_k_groups; //
+
         GridNet();
         ~GridNet();
 
