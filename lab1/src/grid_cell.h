@@ -19,8 +19,9 @@ struct CellEdge {
 class GridCell {
         struct CellPin {
            bool    routed;
-           int     net_idx;     //idx to routed net in net_list
-           int     net_ref_cnt; //incremented on every expand call made by individual CellNets
+           int     net_idx;      //idx to routed net in net_list
+           int     net_ref_cnt;  //incremented on every expand call made by individual CellNets
+
         };
 
         //Cell Co-ordinates on Grid
@@ -73,11 +74,19 @@ bool GridCell::s_uni_track;
 //TODO: default constructor
 //GridCell::GridCell()
 //{
-
 //}
 
-GridCell::GridCell(int _x_pos, int _y_pos, const GridCell * _s_ptr, const GridCell * _e_ptr, const GridCell, )
-: m_x_pos(_x_pos), m_y_pos(_y_pos), m_net_list() {
+GridCell::GridCell(int _x_pos, int _y_pos) : m_x_pos(_x_pos), m_y_pos(_y_pos), m_net_list(), m_pin_list() {
+        m_adj_cnt    = 0;
+        m_adj_south = nullptr;
+        m_adj_east  = nullptr;
+        m_adj_north = nullptr;
+        m_adj_west  = nullptr;
+
+        m_cr_path_cost = 0;
+        m_cr_pred      = nullptr;
+        m_cr_reached   = false;
+
         if ((_m_x_pos % 2) && (_m_y_pos % 2)) {
            //(Odd, Odd)
            m_type = CellType::LOGIC_BLOCK;
@@ -90,14 +99,12 @@ GridCell::GridCell(int _x_pos, int _y_pos, const GridCell * _s_ptr, const GridCe
         } else {
           //(Even, Even)
           m_type = CellType::SWITCH_BOX;
-
         }
 }
 
 /*
  * reutrn 0 if successful
  */
-
 int GridCell::setAdjacency(const GridCell * _s_ptr, const GridCell * _e_ptr, const GridCell * _n_ptr, const GridCell * _w_ptr) const{
     m_adj_cnt = 0;
     if (_s_ptr != nullptr) {
@@ -129,14 +136,19 @@ int GridCell::setAdjacency(const GridCell * _s_ptr, const GridCell * _e_ptr, con
   return 0;
 }
 
-
 bool GridCell::operator < (const GridCell & _cell) const{
      return (m_cr_path_cost < _cell.m_cr_path_cost);
 }
 
-GridCell::addNet(GridNet * _net) {
+GridCell::addCrNet(GridNet * _net) {
+  m_net_list.push_back(_net);
+}
 
-GridCell::getCrEdgeCost() {
+GridCell::removeCrNet(GridNet * _net) {
+  m_net_list.remove(_net);
+}
+
+GridCell::getCrCellCost() {
     switch (m_type) {
        CellType::LOGIC_BLOCK :
            return numeric_limits<int>::max();
@@ -152,9 +164,8 @@ GridCell::getCrEdgeCost() {
 //TODO: implement linear & quadratic cost functions later
 int GridCell::__calcCellCost(bool is_sbox) {
     if (is_sbox) {
-       //TODO:
-       //maximum fan-in for S-Box is 2*CH_WIDTH
-       if (m_net_list.size() == 2 * s_ch_width) {
+       //maximum fan-in for S-Box is (adjacency * s_ch_width / 2)
+       if (m_net_list.size() == (m_adj_cnt * s_ch_width / 2)) {
            return numeric_limits<int>::max();
        } else {
            return 1;

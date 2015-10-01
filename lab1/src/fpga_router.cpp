@@ -6,6 +6,7 @@
 #include <queue>
 #include "grid_net.h"
 #include "grid_cell.h"
+#include "utility.h"
 
 using namespace std;
 
@@ -21,10 +22,8 @@ int main() {
     int                      g_size, ch_width = 0;
     //Global net-lists
     priority_queue<GridNet, vector<GridNet>, NetCompByDistance> net_heap;
-
     //Dikstra heap, used for Coarse-Routing
     priority_queue<GridCell, vector<GridCell>> cr_heap;
-
     //Heap, used to extract the lowest-cost net
     priority_queue<GridNet, vector<GridNet>> dr_heap;
 
@@ -56,21 +55,11 @@ int main() {
             stderr << "ERROR: Failed to parse a path definition... exiting...";
             exit(1);
         }
-
     }
 
     GridCell::CH_WIDTH = ch_width;
-
     int grid_dim = 2 * g_size + 1;
-    fpga_grid.reserve(grid_dim);
 
-    for (int i; i < grid_dim; ++i) {
-        fpga_grid[i].reserve(grid_dim);
-        for (int j; j< grid_dim; ++i) { 
-            GridCell cell(i, j); 
-            fpga_grid[i].push_back(cell);
-        }
-    }
 
     return 0;
 }
