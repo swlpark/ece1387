@@ -4,41 +4,80 @@
 
 using namespace std;
 
+struct Coordinate {
+   int x;
+   int y;
+   int p;
+   Coordinate() : x(0), y(0), p(0) {}
+   Coordinate(int _x, int _y, , int _p) : x(_x), y(_y), p(_p) {}
+   bool operator==(const Coordinate &lhs, const Coordinate &rhs) {
+     if (lhs.x == rhs.x && lhs.y == rhs.y && lhs.p == rhs.p)
+        return true;
+     else 
+        return false;
+   }
+};
+ 
 class GridNet {
-        struct PathTree {
+        struct CrTree {
            GridCell          *node_ptr;
            vector<PathTree*> children;     
-           int               level;
-           int               level;
         };
  
-        //Source to Target
-        int m_source_x, m_source_y, source_pin;
-        int m_target_x, m_target_y, target_pin;
-
-        //Coarse-Routed Graph (i.e. List)
-        vector<Vertex> m_cr_graph;
-
+        int m_line_dist;
         //Detail-Routed Graph (i.e Tree)
         //------------------------------
+        vector<PathTree> m_cr_graph;
  
 
     public:
-        int s_net_id;
-        int s_n_groups; //allowable sub-tree groups
-        int s_k_groups; //
+        //Source to Target
+        int m_src_x, m_src_y, m_src_p;
+        int m_tgt_x, m_tgt_y, m_tgt_p;
+        int m_tgt_row, m_target_col, m_target_pin;
+
+        //Coarse-Routed Graph (i.e. List)
+        list<GridCell*> m_cr_graph;
+
+        static int s_n_groups; //allowable sub-tree groups
+        static int s_k_param;  //
 
         GridNet();
+        GridNet(int, int, int, int, int, int);
         ~GridNet();
 
-        int getLineDistance();
+        int        getLineDistance();
+        Coordinate getSrcCoordinate();
+        Coordinate getTgtCoordinate();
+        int expand();
 };
 
-GridNet() {
+
+GridNet(int _s_x, int _s_y, int _s_p, int _t_x, int _t_y, int _t_p) {
+  m_src_x = _s_x;
+  m_src_y = _s_y;
+  m_src_p = _s_p;
+
+  m_tgt_x = _t_x;
+  m_tgt_y = _t_y;
+  m_tgt_p = _t_p;
+
+  m_line_dist = sqrt(((pow(abs(m_tgt_x - m_src_x)), 2) + pow(abs(m_tgt_y - m_src_y), 2)));
 }
-//return linear distance 
+
+//return linear distance of source and target cell
 int GridNet::getLineDistance() {
-    return sqrt(((pow(abs(m_target_x - m_source_x)), 2) + pow(abs(m_target_y - m_source_y), 2)));
+    return m_line_dist;
+}
+
+Coordinate GridNet::getSrcCoordinate() {
+    Coordinate retval(m_src_x, m_src_y, m_src_p);
+    return retval;
+}
+
+Coordinate GridNet::getTgtCoordinate() {
+    Coordinate retval(m_tgt_x, m_tgt_y, m_tgt_p);
+    return retval;
 }
 
 

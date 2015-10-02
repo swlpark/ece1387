@@ -4,6 +4,14 @@
 #include <vector>
 #include "grid_net.h"
 
+#ifndef SUCCESS
+#define SUCCESS 0
+#endif 
+
+#ifndef FAIL
+#define FAIL 1
+#endif 
+
 using namespace std;
 
 //Different from LB pin definition from the input definition
@@ -21,13 +29,11 @@ class GridCell {
            bool    routed;
            int     net_idx;      //idx to routed net in net_list
            int     net_ref_cnt;  //incremented on every expand call made by individual CellNets
-
         };
 
         //Cell Co-ordinates on Grid
-        int               m_x_pos, m_y_pos;
-        CellType          m_type;
         int               m_adj_cnt;
+
         GridCell          *m_adj_south;
         GridCell          *m_adj_east;
         GridCell          *m_adj_north;
@@ -39,6 +45,8 @@ class GridCell {
 
         int      __calcCellCost(bool);
     public:
+        int               m_x_pos, m_y_pos;
+        CellType          m_type;
 
         //Coarse Routing Scratch
         //------------------------------
@@ -58,10 +66,11 @@ class GridCell {
         bool operator < (const GridCell&) const;
 
         //return "global congestion" cost of using this cell
-        int           getCrCellCost();                      
+        int               getCrCellCost();                      
+        vector<GridCell*> getCrAdjCells();                      
 
-        int           addCrNet     (GridNet *);             //Add a net to the cell
-        int           removeCrNet  (GridNet *);             //remove a net assigned to this cell
+        int               addCrNet     (GridNet *);       //Add a net to the cell
+        int               removeCrNet  (GridNet *);       //remove a net assigned to this cell
 
         //CellNet will call getDrEdges on C and S cells; returns number of edges written to vector
         int           getDrEdges   (int, const GridCell *, vector<CellEdge> &); //"expand given an input pin, and target cell" 
@@ -83,7 +92,7 @@ GridCell::GridCell(int _x_pos, int _y_pos) : m_x_pos(_x_pos), m_y_pos(_y_pos), m
         m_adj_north = nullptr;
         m_adj_west  = nullptr;
 
-        m_cr_path_cost = 0;
+        m_cr_path_cost = numeric_limits<int>::max();
         m_cr_pred      = nullptr;
         m_cr_reached   = false;
 
@@ -125,7 +134,7 @@ int GridCell::setAdjacency(const GridCell * _s_ptr, const GridCell * _e_ptr, con
     }
     if (m_adj_cnt < 2) {
       //note: adjacnecy should always be greater than 2
-      return 1;
+      return FAIL;
     } ()
     if (m_type != CellType::LOGIC_BLOCK) {
       //# of sides * channel_width = num pins
@@ -133,22 +142,47 @@ int GridCell::setAdjacency(const GridCell * _s_ptr, const GridCell * _e_ptr, con
     } else {
       m_pin_list.reserve(4);
     } 
-  return 0;
+  return SUCCESS;
 }
 
 bool GridCell::operator < (const GridCell & _cell) const{
      return (m_cr_path_cost < _cell.m_cr_path_cost);
 }
 
-GridCell::addCrNet(GridNet * _net) {
-  m_net_list.push_back(_net);
+int GridCell::addCrNet(GridNet* _net) {
+  auto iter = find(m_net_list.begin(), m_net_list.end(), _net);
+  if (iter != m_net_list.end()) {
+    m_net_list.push_back(_net);
+    return SUCCESS;
+  } else { //already exists 
+    return FAIL;
+  }
 }
 
-GridCell::removeCrNet(GridNet * _net) {
+//TODO: finish checking if _net exists
+int GridCell::removeCrNet(GridNet* _net) {
   m_net_list.remove(_net);
 }
 
-GridCell::getCrCellCost() {
+//TODO: optimization opportunity in what to push to vector
+vector<GridCell*> GridCell getCrAdjCells() {
+    vector<GridCell*> ptr_vec;
+    if (m_adj_south != nullptr) {
+      ptr_vec.push_back(m_adj_south);
+    }
+    if (m_adj_east != nullptr) {
+      ptr_vec.push_back(m_adj_east);
+    }
+    if (m_adj_north != nullptr) {
+      ptr_vec.push_back(m_adj_north);
+    }
+    if (m_adj_west != nullptr) {
+      ptr_vec.push_back(m_adj_west);
+    }
+    return ptr_vec;
+}
+
+int GridCell::getCrCellCost() {
     switch (m_type) {
        CellType::LOGIC_BLOCK :
            return numeric_limits<int>::max();
@@ -178,3 +212,4 @@ int GridCell::__calcCellCost(bool is_sbox) {
        }
     }
 }
+
