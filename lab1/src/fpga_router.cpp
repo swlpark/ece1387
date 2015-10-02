@@ -2,70 +2,67 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <cstdlib>
 #include <queue>
-
+#include <cstdlib>
 #include <unistd.h>
 
 #include "grid_net.h"
 #include "grid_cell.h"
 #include "utility.h"
 
-using namespace std;
 
-struct NetCompByDistance {
-    public :
-       bool operator() (const GridNet &a, const GridNet &b) {
-          return a.getLineDistance() < b.getLineDistance();    
-       } 
-}
+//Global FPGA cell grid
+vector<vector<GridCell>> g_fpga_grid;
 
-struct CellCompByCellCost {
-    public :
-       bool operator() (const GridCell *a, const GridCell *b) {
-          return a->getCrCellCost() < b->getCrCellCost();    
-       } 
-}
+//Global list of nets
+list<GridNet> g_fpga_nets;
 
-//Global net-lists
-vector<vector<GridCell>> s_fpga_grid;
+bool NetCompByDistance::operator() (const GridNet *a, const GridNet *b) {
+   return a->getLineDistance() < b->getLineDistance();    
+} 
 
-//Dikstra heap, used for Coarse-Routing
-priority_queue<GridCell*, vector<GridCell*>, CellCompByCellCost> cr_heap;
+bool CellCompByCellCost::operator() (const GridCell *a, const GridCell *b) {
+   return a->getCrCellCost() < b->getCrCellCost();    
+} 
 
-void doCrMazeRoute() {
-
-}
 
 int main(int argc, char *argv[]) {
-    int g_size, ch_width = 0;
-
-    //TODO: 
-
-    //Nets to route
-    priority_queue<GridNet, vector<GridNet>, NetCompByDistance> s_net_heap;
+    using namespace std;
 
     //Command Line option parsing:
-    //1) unidirectional -u, bidirectional tracks -d
+    //1) unidirectional -u, bidirectional tracks -b
     //2) channel width -W 
     //2) gui
+    bool u_uni_directional = false;
+    bool u_gui             = false;
+    int  u_width           = 8;
 
-    //while ((c = getopt (argc, argv, "u:d:W")) != -1) {
-    //    switch (c) {
-    //    case 'i':
-    //        iterations = strtoul(optarg, NULL, 10);
-    //        break;
-    //    case 't':
-    //       num_threads = strtoul(optarg, NULL, 10);
-    //       if (num_threads == 0) {
-    //           printf("%s: option requires an argument > 0 -- 't'\n", argv[0]);
-    //                    return EXIT_FAILURE;
-    //        }
-    //       break;
-    //    default:
-    //        return EXIT_FAILURE;
-    //    }
-    //}
+    char c;
+    while ((c = getopt (argc, argv, "uhW:")) != -1) {
+        switch (c) {
+        case 'u':
+            uni_directional = true;
+            break;
+        case 'h': //TODO: help menu
+            cout << "\n HELP MENU" ;
+            break;
+        case 'W':
+           u_width = (int) strtoul(optarg, NULL, 10);
+           if (u_width <= 0 || u_width % 2) {
+              cout << "Must provide a non-zero even number for W\n" ;
+              return EXIT_FAILURE;
+            }
+        default:
+            cout << "Running the FPGA router with default option... \n" ;
+        }
+    }
+
+    int g_size, ch_width = 0;
+
+    //Dikstra heap, used for Coarse-Routing
+    priority_queue<GridCell*, vector<GridCell*>, CellCompByCellCost>  g_cr_heap;
+    //Nets to route
+    priority_queue<GridNet*, vector<GridNet*>, NetCompByDistance> s_net_heap;
 
     //parse standard input
     string line;
@@ -103,7 +100,7 @@ int main(int argc, char *argv[]) {
 
     int grid_dim = 2 * g_size + 1;
 
-    buildFpgaGrid(fpga_grid, grid_dim);
+    buildFpgaGrid(g_fpga_grid, grid_dim);
 
     //NOTE: net is solid object here..
 
@@ -113,27 +110,25 @@ int main(int argc, char *argv[]) {
       Coordinate tgt = net.getTgtCoordinate();
 
       //Start of Dikstra's Algorithm for Coarse Routing
-      fpga_grid[src.x][src.y].m_cr_path_cost = 0;
-      cr_heap.push(&fpga_grid[src.x][src.y]);
+      g_fpga_grid[src.x][src.y].m_cr_path_cost = 0;
+      g_cr_heap.push(&g_fpga_grid[src.x][src.y]);
 
-      while (!cr_heap.empty()) {
-        GridCell* c = cr_heap.pop();
+      while (!g_cr_heap.empty()) {
+        GridCell* c = g_cr_heap.pop();
         c->m_cr_reached = true;
 
         //Check if c is the target cell;
         Coordinate tmp(c->m_x_pos, c->m_y_pos, tgt.p);
         if (tmp == tgt) {
-
           while(c != nullptr) {
             c->addCrNet(&net); 
             m_cr_path_cost.push_front(c);
             c = c->m_cr_pred;
           } 
           //TODO: validate if c is now pointing to the source cell
-          
         }
 
-        //iterate over 
+        //iterate over c's adjacent neighbors
         vector<GridCell*> adj_cells = c->getCrAdjCells();
         for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter ) {
           int tmp_dist = c->m_cr_path_cost + (*iter)->getCrCellCost();
@@ -142,16 +137,21 @@ int main(int argc, char *argv[]) {
              (*iter)->m_cr_pred = c;
              (*iter)->m_cr_path_cost = tmp_dist;
           }
-          cr_heap.push(*iter);
+          g_cr_heap.push(*iter);
         }
       } //end cr_heap while loop
 
-      //TODO: Clean up
-      while() {}
-
+      //clean up for the next net to be coarse-routed
+      for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
+         for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
+            c_it->m_cr_path_cost = numeric_limits<int>::max();
+            c_it->m_cr_pred = nullptr;
+            c_it->m_cr_reached = false;
+         }
+      }
       break;
 
-    }
+    }//end s_net_heap loop
     return 0;
 }
 
