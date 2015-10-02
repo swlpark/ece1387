@@ -61,11 +61,9 @@ GridNet(int _s_x, int _s_y, int _s_p, int _t_x, int _t_y, int _t_p) {
   m_tgt_x = _t_x;
   m_tgt_y = _t_y;
   m_tgt_p = _t_p;
-
   m_line_dist = sqrt(((pow(abs(m_tgt_x - m_src_x)), 2) + pow(abs(m_tgt_y - m_src_y), 2)));
 }
 
-//return linear distance of source and target cell
 int GridNet::getLineDistance() {
     return m_line_dist;
 }
@@ -78,6 +76,10 @@ Coordinate GridNet::getSrcCoordinate() {
 Coordinate GridNet::getTgtCoordinate() {
     Coordinate retval(m_tgt_x, m_tgt_y, m_tgt_p);
     return retval;
+}
+
+int GridNet::expand() {
+    return m_line_dist;
 }
 
 

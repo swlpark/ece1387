@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
         }
       } //end cr_heap while loop
 
-      //clean up for the next net to be coarse-routed
+      //clean up grid for next Dikstra run
       for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
          for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
             c_it->m_cr_path_cost = numeric_limits<int>::max();
