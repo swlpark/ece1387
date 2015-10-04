@@ -17,7 +17,6 @@ extern vector<vector<GridCell>> g_fpga_grid;
 //Global list of nets
 extern list<GridNet> g_fpga_nets;
 
-
 void doCrMazeRoute();
 
 #endif 
