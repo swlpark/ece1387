@@ -19,17 +19,25 @@ struct Coordinate {
 };
 
 class GridNet {
-	struct CrTree {
+	struct PathTree {
 		GridCell          *node_ptr;
-		vector<PathTree*> children;     
 	   int               path_cost;
+	   int               grp_number;
+		vector<PathTree*> children;     
+		vector<int>       o_pins;
+
+      PathTree () : children(), o_pins() {
+		   node_ptr = nullptr;
+	      path_cost = 0;
+	      grp_number = 0;
+      }
 	};
+
 	int m_line_dist;
 
 	//Detail-Routed Graph (i.e Tree)
 	//------------------------------
-	vector<PathTree> m_dr_graph;
-
+	PathTree * m_dr_graph;
 
 	public:
 	   //Source to Target
@@ -47,14 +55,14 @@ class GridNet {
 	   GridNet(int, int, int, int, int, int);
 	   ~GridNet();
 
-	   int        expand();
+	   int        generateDrTree();
 	   int        getLineDistance();
 	   Coordinate getSrcCoordinate();
 	   Coordinate getTgtCoordinate();
 };
 
 
-GridNet(int _s_x, int _s_y, int _s_p, int _t_x, int _t_y, int _t_p) : m_cr_graph(), m_dr_graph() {
+GridNet(int _s_x, int _s_y, int _s_p, int _t_x, int _t_y, int _t_p) : m_cr_graph() {
 	m_src_x = _s_x;
 	m_src_y = _s_y;
 	m_src_p = _s_p;
@@ -63,6 +71,7 @@ GridNet(int _s_x, int _s_y, int _s_p, int _t_x, int _t_y, int _t_p) : m_cr_graph
 	m_tgt_y = _t_y;
 	m_tgt_p = _t_p;
 
+   m_dr_graph  = nullptr;
 	m_line_dist = sqrt(((pow(abs(m_tgt_x - m_src_x)), 2) + pow(abs(m_tgt_y - m_src_y), 2)));
 }
 
@@ -80,9 +89,38 @@ Coordinate GridNet::getTgtCoordinate() {
 	return retval;
 }
 
-int GridNet::expand() {
-   if ()
-   return EXIT_FAILURE;
-}
+int GridNet::generateDrTree() {
+   if (m_cr_graph.size() < 3) {
+      std::err << "GridNet Error: must have +3 nodes on a coarse graph path\n";
+      return EXIT_FAILURE;
+   }
 
+   m_dr_graph = new PathTree();
+   m_dr_graph->node_ptr = (*m_cr_graph.begin());
+   m_dr_graph->grp_number = 0;
+   m_dr_graph->path_cost = 0;
+   m_dr_graph->o_pins = m_src_p;
+
+   for (auto it = m_cr_graph.begin(); it != m_cr_graph.end(); ++i ) {
+      if ((*it)-> m_type == CellType::V_CHANNEL || (*it)-> m_type == CellType::H_CHANNEL ) {
+         //expansion node at first channel on path
+         PathTree* exp_node = new PathTree();
+         exp_node->node_ptr = (*it);
+         exp_node->grp_number = 0;
+
+         //copy by move
+         vector<int> exp_pins;
+
+         m_dr_graph->node_ptr = (*m_cr_graph.begin());
+         m_dr_graph->children.push_back(exp_node);
+
+         m_dr_graph->node_ptr = exp_node;
+
+         (*it)->getTrackBundle ()
+         it 
+         break;
+      }
+   }
+
+}
 

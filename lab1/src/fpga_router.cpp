@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
    //Command Line option parsing:
    //1) unidirectional -u, bidirectional tracks -b
    //2) channel width -W 
-   //2) gui
+   //3) gui
    bool u_uni_directional = false;
    bool u_gui             = false;
    int  u_width           = 8;
@@ -57,6 +57,7 @@ int main(int argc, char *argv[]) {
    }
 
    int g_size, ch_width = 0;
+
    //Dikstra heap, used for Coarse-Routing
    priority_queue<GridCell*, vector<GridCell*>, CellCompByCellCost>  s_cr_heap;
    //Nets to route
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]) {
 
       if (iss >> s_y >> s_x >> s_p >> t_y >> t_x >> t_p) {
          GridNet net((2*s_x + 1), (2*s_y + 1), s_p, (2*t_x + 1), (2*t_y + 1), t_p);
-         s_net_heap.push(net);
+         g_fpga_nets.push_back(net);
       } else {
          stderr << "ERROR: Failed to parse a path definition... exiting...";
          exit(1);
@@ -99,6 +100,9 @@ int main(int argc, char *argv[]) {
    int grid_dim = 2 * g_size + 1;
 
    buildFpgaGrid(g_fpga_grid, grid_dim);
+
+   //TODO:
+   s_net_heap.push(net);
 
    //NOTE: net is solid object here..
    while(!s_net_heap.empty()) {

@@ -12,65 +12,60 @@
 enum class CellSide {SOUTH=0, EAST=1, NORTH=2, WEST=3};
 enum class CellType {LOGIC_BLOCK, V_CHANNEL, H_CHANNEL, SWITCH_BOX};
 
-//TODO: what to return for an edge?
-struct CellEdge {
-   int     i_pin;     //input pin
-   int     o_pin;     //output pin number
-};
-
 class GridCell {
-   struct CellPin {
-      bool    routed;
-      //int     net_idx;      //idx to routed net in net_list
-      int     net_ref_cnt;  //incremented on every expand call made by individual CellNets
-   };
+      struct CellPin {
+         bool    routed;
+         //int     net_idx;      //idx to routed net in net_list
+         int     net_ref_cnt;  //incremented on every expand call made by individual CellNets
+      };
 
-   //Cell Co-ordinates on Grid
-   int               m_adj_cnt;
+      //Cell Co-ordinates on Grid
+      int               m_adj_cnt;
 
-   GridCell          *m_adj_south;
-   GridCell          *m_adj_east;
-   GridCell          *m_adj_north;
-   GridCell          *m_adj_west;
+      GridCell          *m_adj_south;
+      GridCell          *m_adj_east;
+      GridCell          *m_adj_north;
+      GridCell          *m_adj_west;
 
-   //TODO:need mechanism to rotate through edges on each getGrEdgesCall
-   list  <GridNet*>  m_net_list;
-   vector<CellPin>   m_pin_list;
+      //TODO:need mechanism to rotate through edges on each getGrEdgesCall
+      list  <GridNet*>  m_net_list;
+      vector<CellPin>   m_pin_list;
 
-   int      __calcCellCost(bool);
+      int      __calcCellCost(bool);
+
    public:
-   int               m_x_pos, m_y_pos;
-   CellType          m_type;
+      int               m_x_pos, m_y_pos;
+      CellType          m_type;
 
-   //Coarse Routing Scratch
-   //------------------------------
-   //Dikstra back-tracking ptr
-   int         m_cr_path_cost;
-   GridCell   *m_cr_pred;
-   bool        m_cr_reached;
+      //Coarse Routing Scratch
+      //------------------------------
+      //Dikstra back-tracking ptr
+      int         m_cr_path_cost;
+      GridCell   *m_cr_pred;
+      bool        m_cr_reached;
 
-   static int  s_ch_width;
-   static bool s_uni_track;
+      static int  s_ch_width;
+      static bool s_uni_track;
 
-   GridCell();
-   GridCell(int, int) ;
-   ~GridCell();
+      GridCell();
+      GridCell(int, int) ;
+      ~GridCell();
 
-   int             setAdjacency  (const GridCell *, const GridCell *, const GridCell *, const GridCell *); 
-   bool operator < (const GridCell&) const;
+      int             setAdjacency  (const GridCell *, const GridCell *, const GridCell *, const GridCell *); 
+      bool operator < (const GridCell&) const;
 
-   //return "global congestion" cost of using this cell
-   int               getCrCellCost();                      
-   vector<GridCell*> getCrAdjCells();                      
+      //return "global congestion" cost of using this cell
+      int               getCrCellCost();                      
+      vector<GridCell*> getCrAdjCells();                      
 
-   int               addCrNet     (GridNet *);       //Add a net to the cell
-   int               removeCrNet  (GridNet *);       //remove a net assigned to this cell
+      int               addCrNet     (GridNet *);       //Add a net to the cell
+      int               removeCrNet  (GridNet *);       //remove a net assigned to this cell
 
-   //CellNet will call getDrEdges on C and S cells; returns number of edges written to vector
-   int           getTrackBundle  (int, int, const GridCell *, vector<int> &); //called when S->C
-   int           getOutputPin    (int, const GridCell *); //"expand given an input pin, and target cell" 
+      //CellNet will call getDrEdges on C and S cells; returns number of edges written to vector
+      int           getTrackBundle  (int, int, const GridCell *, vector<int> &); //called when S->C
+      int           getOutputPin    (int, const GridCell *); //"expand given an input pin, and target cell" 
 
-   int           routeDrNet   (int, int) ;           //trigger update to attached nets
+      int           routeDrNet   (int, int) ;           //trigger update to attached nets
 };
 
 #endif
@@ -202,8 +197,8 @@ int GridCell::getCrCellCost() {
    } 
 }:
 
-/*  NOTE: caller make sure that src pin is not on the same side as the target side
- *  expand given an input pin, and target cell; valid for Channels and Switch box
+/*  
+ *  expand on LB=>Channel
  */
 int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, vector<int> & edges) {
    //edges simply are the output pins of this cell
@@ -234,13 +229,13 @@ int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, vector<i
       return EXPAND_FAIL;
    }
 
+   edges.reserve(req_edges);
    for (int i = 0; i < s_ch_width; ++i) {
       if (edge_cnt >= req_edges) {
          break;
       } else if (!m_net_list[(i + tgt_side)].routed) {
         ++edge_cnt;
         edges.push_back((i + tgt_side));
-
         m_net_list[i].net_ref_cnt++;
         m_net_list[(i + tgt_side)].net_ref_cnt++;
       }
@@ -249,29 +244,60 @@ int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, vector<i
    return edge_cnt;
 }
 
-int GridCell::getOutputPin (int in_pin, const GridCell * tgt_cell) {
-   int edge_cnt = 0;
+/* 
+* NOTE: caller make sure that src pin is not on the same side as the target side
+*/
+int GridCell::getOutputPin (int src_pin, const GridCell * tgt_cell) {
    //src track number on each side
-   int src_track_idx = src_pin % s_ch_width;
-   int tgt_track_idx;
+   int track_idx = src_pin % s_ch_width;
+   int tgt_pin = 0; 
 
    if (m_type == CellType::H_CHANNEL) {
       if (m_adj_south == tgt_cell) {
-         if (!m_pin_list[src_track_idx].routed) {
-
-         }
+         tgt_pin = track_idx; 
       } else if (m_adj_north == tgt_cell) {
-
+         tgt_pin = s_ch_width + track_idx; 
       } else {
-         std::cerr << "getDrEdges called with target that is not adjacent";
-         return 0;
+         std::cerr << "getOutput pin is called with target that is not adjacent, (" << m_x_pos << ", " << m_y_pos ")\n";
+         return EXPAND_FAIL;
       }
    } else if (m_type == CellType::V_CHANNEL) {
-
+      if (m_adj_east == tgt_cell) {
+         tgt_pin = track_idx; 
+      } else if (m_adj_west == tgt_cell) {
+         tgt_pin = s_ch_width + track_idx; 
+      } else {
+         std::cerr << "getOutput pin is called with target that is not adjacent, (" << m_x_pos << ", " << m_y_pos ")\n";
+         return EXPAND_FAIL;
+      }
    }  else if (m_type == CellType::SWITCH_BOX) {
+      if (m_adj_south == tgt_cell) {
+         tgt_pin = track_idx; 
+      } else if (m_adj_east == tgt_cell) {
+         tgt_pin = track_idx; 
+         if (m_adj_south != nullptr) tgt_pin += s_ch_width;
+      } else if (m_adj_north == tgt_cell) {
+         tgt_pin = track_idx; 
+         if (m_adj_south != nullptr) tgt_pin += s_ch_width;
+         if (m_adj_east != nullptr)  tgt_pin += s_ch_width;
 
+      } else if (m_adj_west == tgt_cell) {
+         tgt_pin = track_idx; 
+         if (m_adj_south != nullptr) tgt_pin += s_ch_width;
+         if (m_adj_east != nullptr)  tgt_pin += s_ch_width;
+         if (m_adj_north != nullptr) tgt_pin += s_ch_width;
+      } else {
+         std::cerr << "getOutput pin is called with target that is not adjacent, (" << m_x_pos << ", " << m_y_pos ")\n";
+         return EXPAND_FAIL;
+      }
    } 
-   return edge_cnt;
+
+   if (m_pin_list[tgt_pin].routed) {
+      return EXPAND_FAIL;
+   }
+   m_net_list[src_pin].net_ref_cnt++;
+   m_net_list[tgt_pin].net_ref_cnt++;
+   return tgt_pin;
 }
 
 //TODO: implement linear & quadratic cost functions later
