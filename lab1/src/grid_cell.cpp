@@ -55,22 +55,23 @@ int GridCell::setAdjacency(GridCell * _s_ptr, GridCell * _e_ptr, GridCell * _n_p
    m_adj_cnt = 0;
    if (_s_ptr != nullptr) {
       m_adj_south = _s_ptr;
-      m_adj_cnt++;
+      //adjacent LB does not increase a channel's pin count
+      if (! (_s_ptr->m_type == CellType::LOGIC_BLOCK) ) m_adj_cnt++;
    }
    if (_e_ptr != nullptr) {
       m_adj_east = _e_ptr;
-      m_adj_cnt++;
+      if (! (_e_ptr->m_type == CellType::LOGIC_BLOCK) ) m_adj_cnt++;
    }
    if (_n_ptr != nullptr) {
       m_adj_north = _n_ptr;
-      m_adj_cnt++;
+      if (! (_n_ptr->m_type == CellType::LOGIC_BLOCK) ) m_adj_cnt++;
    }
    if (_w_ptr != nullptr) {
       m_adj_west = _w_ptr;
-      m_adj_cnt++;
+      if (! (_w_ptr->m_type == CellType::LOGIC_BLOCK) ) m_adj_cnt++;
    }
    if (m_adj_cnt < 2) {
-      //note: adjacnecy should always be greater or equal to 2
+      std::cerr << "adjacnecy should always be greater or equal to 2\n";
       return EXIT_FAILURE;
    }
 
@@ -192,7 +193,8 @@ int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, std::vec
       } else if (m_adj_north == tgt_cell) {
         tgt_side = s_ch_width; 
       } else {
-         std::cerr << "ERROR: getTrackBundle called with target that is not adjacent. Cell: (" << m_x_pos << ", " << m_y_pos << ");\n";
+         std::cerr << "ERROR: getTrackBundle called with target that is not adjacent. Cell: (" \
+         << m_x_pos << ", " << m_y_pos << ");\n";
          return EXPAND_FAIL;
       }
    } else if (m_type == CellType::V_CHANNEL) {
@@ -201,12 +203,14 @@ int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, std::vec
       } else if (m_adj_west == tgt_cell) {
         tgt_side = s_ch_width; 
       } else {
-         std::cerr << "ERROR: getTrackBundle called with target that is not adjacent. Cell: (" << m_x_pos << ", " << m_y_pos << ");\n";
+         std::cerr << "ERROR: getTrackBundle called with target that is not adjacent. Cell: (" \
+         << m_x_pos << ", " << m_y_pos << ");\n";
          return EXPAND_FAIL;
       }
 
    } else {
-      std::cerr << "ERROR: getTrackBundle called on a cell that is not a channel ( " << m_x_pos << ", " << m_y_pos << ");\n";
+      std::cerr << "ERROR: getTrackBundle called on a cell that is not a channel ( " \
+      << m_x_pos << ", " << m_y_pos << ");\n";
       return EXPAND_FAIL;
    }
 
@@ -230,28 +234,40 @@ int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, std::vec
 /* TODO: implement uni-directional support
 * NOTE: caller make sure that src pin is not on the same side as the target side
 */
-int GridCell::getOutputPin (int src_pin, const GridCell * tgt_cell) {
+int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_cell) {
    //src track number on each side
    int track_idx = src_pin % s_ch_width;
    int tgt_pin = 0; 
 
    if (m_type == CellType::H_CHANNEL) {
-      if (m_adj_south == tgt_cell) {
-         tgt_pin = track_idx; 
-      } else if (m_adj_north == tgt_cell) {
-         tgt_pin = s_ch_width + track_idx; 
+      if (tgt_cell->m_type == CellType::LOGIC_BLOCK) {
+         std::cout << "Dr Routing Info: Reached Logic block, returning LB_PIN= " << lb_tgt_pin << "\n";
+         return lb_tgt_pin;
       } else {
-         std::cerr << "getOutput pin is called with target that is not adjacent, (" << m_x_pos << ", " << m_y_pos << ")\n";
-         return EXPAND_FAIL;
+         if (m_adj_south == tgt_cell) {
+            tgt_pin = track_idx; 
+         } else if (m_adj_north == tgt_cell) {
+            tgt_pin = s_ch_width + track_idx; 
+         } else {
+            std::cerr << "getOutput pin is called with target that is not adjacent, src(" \
+            << m_x_pos << ", " << m_y_pos << ")\n";
+            return EXPAND_FAIL;
+         }
       }
    } else if (m_type == CellType::V_CHANNEL) {
-      if (m_adj_east == tgt_cell) {
-         tgt_pin = track_idx; 
-      } else if (m_adj_west == tgt_cell) {
-         tgt_pin = s_ch_width + track_idx; 
+      if (tgt_cell->m_type == CellType::LOGIC_BLOCK) {
+         std::cout << "Dr Routing Info: Reached Logic block, returning LB_PIN= " << lb_tgt_pin << "\n";
+         return lb_tgt_pin;
       } else {
-         std::cerr << "getOutput pin is called with target that is not adjacent, (" << m_x_pos << ", " << m_y_pos << ")\n";
-         return EXPAND_FAIL;
+         if (m_adj_east == tgt_cell) {
+            tgt_pin = track_idx; 
+         } else if (m_adj_west == tgt_cell) {
+            tgt_pin = s_ch_width + track_idx; 
+         } else {
+            std::cerr << "getOutput pin is called with target that is not adjacent, src(" \
+            << m_x_pos << ", " << m_y_pos << ")\n";
+            return EXPAND_FAIL;
+         }
       }
    }  else if (m_type == CellType::SWITCH_BOX) {
       if (m_adj_south == tgt_cell) {
@@ -270,7 +286,8 @@ int GridCell::getOutputPin (int src_pin, const GridCell * tgt_cell) {
          if (m_adj_east != nullptr)  tgt_pin += s_ch_width;
          if (m_adj_north != nullptr) tgt_pin += s_ch_width;
       } else {
-         std::cerr << "getOutput pin is called with target that is not adjacent, (" << m_x_pos << ", " << m_y_pos << ")\n";
+         std::cerr << "getOutput pin is called with target that is not adjacent, src(" \
+         << m_x_pos << ", " << m_y_pos << ")\n";
          return EXPAND_FAIL;
       }
    } 

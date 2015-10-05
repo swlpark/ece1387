@@ -60,14 +60,16 @@ int GridNet::generateDrTree() {
 
    std::list<PathTree*> leaf_queue;
    int lv_cnt = 0;
+   int q_size = 0;
    for (auto it = m_cr_graph.begin(); it != m_cr_graph.end(); ++it) {
       PathTree* parent;
       PathTree* exp_node;
       GridCell * lh_cell =  *(std::next(it, 1));
+      q_size = leaf_queue.size(); 
 
       if ((*it)-> m_type == CellType::V_CHANNEL || (*it)->m_type == CellType::H_CHANNEL ) {
          //branch node at first channel on path
-         if (leaf_queue.size() == 1 && leaf_queue.front()->node_ptr->m_type == CellType::LOGIC_BLOCK) {
+         if (q_size == 1 && leaf_queue.front()->node_ptr->m_type == CellType::LOGIC_BLOCK) {
             parent = leaf_queue.front();
             leaf_queue.pop_front();
 
@@ -84,8 +86,8 @@ int GridNet::generateDrTree() {
                std::cout << "GridNet Info: not enough routing resource(s) on the first channel, @LEVEL=" << lv_cnt << "\n";
                return EXIT_FAILURE;
             }
-         } else if (leaf_queue.size() >= 1) { //expanding each path by one hop
-            while (!leaf_queue.empty()) {
+         } else if (q_size >= 1) { //expanding each path by one hop
+            for(int k=0; k<q_size; ++k) {
                parent = leaf_queue.front();
                leaf_queue.pop_front();
                PathTree* exp_node = new PathTree();
@@ -98,7 +100,7 @@ int GridNet::generateDrTree() {
                int tgt_i_pin = matchAdjacentPin(parent->o_pins[0], parent->node_ptr, (*it));
                if (tgt_i_pin >= 0) {
                   int tgt_o_pin;
-                  tgt_o_pin =(*it)->getOutputPin(tgt_i_pin, lh_cell);
+                  tgt_o_pin =(*it)->getOutputPin(tgt_i_pin, m_tgt_p, lh_cell);
                   if (tgt_o_pin >= 0) {
                      exp_node->o_pins.push_back(tgt_o_pin);
                   } else {
@@ -118,7 +120,7 @@ int GridNet::generateDrTree() {
          }
       } else if ((*it)-> m_type == CellType::SWITCH_BOX) {
          //branch childen on first switch box
-         if (leaf_queue.size() == 1 && leaf_queue.front()->o_pins.size() > 1) {
+         if (q_size == 1 && leaf_queue.front()->o_pins.size() > 1) {
             parent = leaf_queue.front();
             leaf_queue.pop_front();
             int grp_num = 0;
@@ -134,7 +136,7 @@ int GridNet::generateDrTree() {
                int tgt_i_pin = matchAdjacentPin(*pin_it, parent->node_ptr, (*it));
                if (tgt_i_pin >= 0) {
                   int tgt_o_pin;
-                  tgt_o_pin =(*it)->getOutputPin(tgt_i_pin, lh_cell);
+                  tgt_o_pin =(*it)->getOutputPin(tgt_i_pin, m_tgt_p, lh_cell);
                   if (tgt_o_pin >= 0) {
                      exp_node->o_pins.push_back(tgt_o_pin);
                   } else {
@@ -149,8 +151,8 @@ int GridNet::generateDrTree() {
                leaf_queue.push_back(exp_node);
 
             }
-         } else if (leaf_queue.size() >= 1) { //expanding each path by one hop
-            while (!leaf_queue.empty()) {
+         } else if (q_size >= 1) { //expanding each path by one hop
+            for (int k=0; k < q_size; ++k) {
                parent = leaf_queue.front();
                leaf_queue.pop_front();
                PathTree* exp_node = new PathTree();
@@ -163,7 +165,7 @@ int GridNet::generateDrTree() {
                int tgt_i_pin = matchAdjacentPin(parent->o_pins[0], parent->node_ptr, (*it));
                if (tgt_i_pin >= 0) {
                   int tgt_o_pin;
-                  tgt_o_pin =(*it)->getOutputPin(tgt_i_pin, lh_cell);
+                  tgt_o_pin =(*it)->getOutputPin(tgt_i_pin, m_tgt_p, lh_cell);
                   if (tgt_o_pin >= 0) {
                      exp_node->o_pins.push_back(tgt_o_pin);
                   } else {

@@ -45,7 +45,6 @@ class GridNet {
       }
 
    };
-
    int m_line_dist;
 
    //Detail-Routed Graph (i.e Tree)

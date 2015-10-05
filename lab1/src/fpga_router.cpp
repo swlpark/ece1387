@@ -190,6 +190,10 @@ int main(int argc, char *argv[]) {
                cout << " REACHED\n";
                continue;
             }
+            if ((*iter)->getCrCellCost(tgt.p, c) == numeric_limits<int>::max()) {
+               cout << "NOT ADJACENT TO PIN: " << tgt.p << "\n";
+               continue;
+            }
             int tmp_dist = c->m_cr_path_cost + (*iter)->getCrCellCost(tgt.p, c);
             if (tmp_dist < (*iter)->m_cr_path_cost) {
                (*iter)->m_cr_pred = c;
