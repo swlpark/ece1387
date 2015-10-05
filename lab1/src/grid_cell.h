@@ -23,8 +23,6 @@ class GridCell {
          int     net_ref_cnt;  //incremented on every expand call made by individual CellNets
       };
 
-      //Cell Co-ordinates on Grid
-      int               m_adj_cnt;
 
       std::list  <GridNet*>  m_net_list;
       std::vector<CellPin>   m_pin_list;
@@ -34,6 +32,9 @@ class GridCell {
       int      __calcCellCost(bool);
 
    public:
+      //Cell Co-ordinates on Grid
+      int               m_adj_cnt;
+
       int               m_x_pos;
       int               m_y_pos;
       CellType          m_type;

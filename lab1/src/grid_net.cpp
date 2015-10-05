@@ -59,6 +59,7 @@ int GridNet::generateDrTree() {
    }
 
    std::list<PathTree*> leaf_queue;
+   int lv_cnt = 0;
    for (auto it = m_cr_graph.begin(); it != m_cr_graph.end(); ++it) {
       PathTree* parent;
       PathTree* exp_node;
@@ -80,7 +81,7 @@ int GridNet::generateDrTree() {
                parent->children.push_back(br_node);
                leaf_queue.push_back(br_node);
             } else { //ROUTING FAIL
-               std::cout << "GridNet Info: not enough routing resource(s) on the first channel\n";
+               std::cout << "GridNet Info: not enough routing resource(s) on the first channel, @LEVEL=" << lv_cnt << "\n";
                return EXIT_FAILURE;
             }
          } else if (leaf_queue.size() >= 1) { //expanding each path by one hop
@@ -92,7 +93,6 @@ int GridNet::generateDrTree() {
                exp_node->grp_number = parent->grp_number;
                exp_node->o_pins.reserve(1);
                exp_node->children.reserve(1);
-               parent->children.push_back(exp_node);
 
                //mapping parent's o_pin to target's input pin
                int tgt_i_pin = matchAdjacentPin(parent->o_pins[0], parent->node_ptr, (*it));
@@ -102,16 +102,18 @@ int GridNet::generateDrTree() {
                   if (tgt_o_pin >= 0) {
                      exp_node->o_pins.push_back(tgt_o_pin);
                   } else {
-                     std::cout << "GridNet Info: not enough routing resource(s) on a middle channel\n";
+                     std::cout << "GridNet Info: not enough routing resource(s) on a middle channel, @LEVEL=" << lv_cnt <<"\n";
                      return EXIT_FAILURE;
                   }
                } else {
-                  std::cerr << "GridNet Error: could not find a matching pin...\n";
+                  std::cerr << "GridNet Error: could not find a matching pin..., @LEVEL=" << lv_cnt <<"\n";
                   return EXIT_FAILURE;
                }
+               parent->children.push_back(exp_node);
+               leaf_queue.push_back(exp_node);
             }
          } else {
-            std::cerr << "GridNet Error: Channel is encountered when queue is empty\n";
+            std::cerr << "GridNet Error: Channel is encountered when queue is empty, @LEVEL=" << lv_cnt << "\n";
             return EXIT_FAILURE;
          }
       } else if ((*it)-> m_type == CellType::SWITCH_BOX) {
@@ -127,7 +129,6 @@ int GridNet::generateDrTree() {
                exp_node->grp_number = ++grp_num;
                exp_node->o_pins.reserve(1);
                exp_node->children.reserve(1);
-               parent->children.push_back(exp_node);
 
                //mapping parent's o_pin to target's input pin
                int tgt_i_pin = matchAdjacentPin(*pin_it, parent->node_ptr, (*it));
@@ -144,6 +145,8 @@ int GridNet::generateDrTree() {
                   std::cerr << "GridNet Error: could not find a matching pin...\n";
                   return EXIT_FAILURE;
                }
+               parent->children.push_back(exp_node);
+               leaf_queue.push_back(exp_node);
 
             }
          } else if (leaf_queue.size() >= 1) { //expanding each path by one hop
@@ -155,7 +158,6 @@ int GridNet::generateDrTree() {
                exp_node->grp_number = parent->grp_number;
                exp_node->o_pins.reserve(1);
                exp_node->children.reserve(1);
-               parent->children.push_back(exp_node);
 
                //mapping parent's o_pin to target's input pin
                int tgt_i_pin = matchAdjacentPin(parent->o_pins[0], parent->node_ptr, (*it));
@@ -172,9 +174,11 @@ int GridNet::generateDrTree() {
                   std::cerr << "GridNet Error: could not find a matching pin...\n";
                   return EXIT_FAILURE;
                }
+               parent->children.push_back(exp_node);
+               leaf_queue.push_back(exp_node);
             }
          } else {
-            std::cerr << "GridNet Error: Channel is encountered when queue is empty\n";
+            std::cerr << "GridNet Error: Channel is encountered when queue is empty @LEVEL= " << lv_cnt << "\n";
             return EXIT_FAILURE;
          }
       } else if ((*it)-> m_type == CellType::LOGIC_BLOCK) {
@@ -188,6 +192,7 @@ int GridNet::generateDrTree() {
             m_dr_graph->o_pins[0] = m_src_p;
             m_dr_graph->children.reserve(1);
             leaf_queue.push_back(m_dr_graph);
+            std::cout << "DEBUG: generateDrTree info: pushing the first LB node into leaf queue \n";
          } else if ((it != m_cr_graph.end()) && (it == --m_cr_graph.end()))  { //LAST ELEMENT
             while (!leaf_queue.empty()) {
                parent = leaf_queue.front();
@@ -203,7 +208,19 @@ int GridNet::generateDrTree() {
             return EXIT_FAILURE;
          }
       }
+      lv_cnt += 1;
    }
    return EXIT_SUCCESS;
 }
 
+void GridNet::printCrGraph() {
+   if (m_cr_graph.size() > 0) {
+     int cnt = 0;
+     for(auto it = m_cr_graph.begin(); it != m_cr_graph.end(); ++it) {
+        std::cout << "Level-" << cnt++ << " : " << tostring_cell_type(*it) << "(" << (*it)->m_x_pos << ", " \
+        << (*it)->m_y_pos << ") \n";
+     }
+   } else {
+     std::cout << "GridNet: printCrGraph() called with zero cr_graph\n";
+   }
+}

@@ -2,6 +2,7 @@
 #define _GRID_NET_H_
 #define EXPAND_FAIL -1
 
+#include <iostream>
 #include <iterator>
 #include <vector>
 #include <cmath>
@@ -72,6 +73,7 @@ class GridNet {
    int        getLineDistance();
    Coordinate getSrcCoordinate();
    Coordinate getTgtCoordinate();
+   void       printCrGraph();
 };
 
 #endif

@@ -2,13 +2,13 @@
 #define _FPGA_ROUTER_H_
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <queue>
 #include <cstdlib>
 #include <iterator>
 #include <unistd.h>
-
 #include "grid_net.h"
 #include "grid_cell.h"
 #include "utility.h"

@@ -8,9 +8,10 @@ void build_FPGA_grid (std::vector<std::vector<GridCell>> &grid, int grid_dim) {
 	grid.reserve(grid_dim);
 
 	for (int i=0; i < grid_dim; ++i) {
+      grid.push_back (std::vector<GridCell>());
 		grid[i].reserve(grid_dim);
 		for (int j=0; j< grid_dim; ++j) { 
-			GridCell cell(i, j); 
+			GridCell cell(j, i); //i.e. cell(col, row) 
 			grid[i].push_back(cell);
 		}
 	}
@@ -22,16 +23,31 @@ void build_FPGA_grid (std::vector<std::vector<GridCell>> &grid, int grid_dim) {
 					//LBs...
 					grid[i][j].setAdjacency(&grid[i-1][j], &grid[i][j+1],
 							&grid[i+1][j], &grid[i][j-1]);
-				} else { //even col
-					//HCs...
-					grid[i][j].setAdjacency(&grid[i-1][j], nullptr,
-							&grid[i+1][j], nullptr);
+				} else { //even col => HCs...
+               if(j == 0) {//leftmost col, connects to right LB
+					  grid[i][j].setAdjacency(&grid[i-1][j], &grid[i][j+1],
+					  		&grid[i+1][j], nullptr);
+               } else if (j == grid_dim-1) { //rightmost col, connects to left LB
+					  grid[i][j].setAdjacency(&grid[i-1][j], nullptr,
+					  		&grid[i+1][j], &grid[i][j-1]);
+               } else { //inner cols //connects to left, right LBs
+					  grid[i][j].setAdjacency(&grid[i-1][j], &grid[i][j+1],
+					  		&grid[i+1][j], &grid[i][j-1]);
+               }
 				}
 			} else { //even row
 				if (j % 2) { //odd col
 					//VCs...
-					grid[i][j].setAdjacency(nullptr, &grid[i][j+1],
-							nullptr, &grid[i][j-1]);
+					if (i == 0) { //bottom row
+					  grid[i][j].setAdjacency(nullptr, &grid[i][j+1],
+					  		&grid[i+1][j], &grid[i][j-1]);
+               } else if (i==grid_dim-1) { //top row
+					  grid[i][j].setAdjacency(&grid[i-1][j], &grid[i][j+1],
+					  		nullptr, &grid[i][j-1]);
+               } else { //middle rows
+					  grid[i][j].setAdjacency(&grid[i-1][j], &grid[i][j+1],
+					  		&grid[i+1][j], &grid[i][j-1]);
+               }
 				} else { //even col
 					//SBs...
 					if (i == 0) { //on bottom row
@@ -78,6 +94,51 @@ void build_FPGA_grid (std::vector<std::vector<GridCell>> &grid, int grid_dim) {
 			} //end even row
 		} //end col loop
 	} //end row loop
+}
+
+void print_FPGA_grid (std::vector<std::vector<GridCell>> &grid) {
+  int row_cnt =0;
+  for (auto r_it = grid.begin(); r_it != grid.end(); ++r_it) {
+        std::cout << "ROW-" << row_cnt++ << ": ";
+     for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
+        std::string desc;
+        switch ((*c_it).m_type) {
+          case CellType::LOGIC_BLOCK :
+             desc = std::string("LB");
+             break;
+          case CellType::V_CHANNEL :
+             desc = std::string("VC");
+             break;
+          case CellType::H_CHANNEL :
+             desc = std::string("HC");
+             break;
+          case CellType::SWITCH_BOX :
+             desc = std::string("SB");
+             break;
+        }
+        std::cout << desc << "(" << (*c_it).m_adj_cnt << ") ";
+     }
+        std::cout << "\n";
+  }
+}
+
+std::string tostring_cell_type (GridCell * cell) {
+    std::string desc;
+        switch ((*cell).m_type) {
+          case CellType::LOGIC_BLOCK :
+             desc = std::string("LB");
+             break;
+          case CellType::V_CHANNEL :
+             desc = std::string("VC");
+             break;
+          case CellType::H_CHANNEL :
+             desc = std::string("HC");
+             break;
+          case CellType::SWITCH_BOX :
+             desc = std::string("SB");
+             break;
+        }
+    return desc;
 }
 
 /*TODO: implement uni-directional support

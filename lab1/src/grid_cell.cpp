@@ -66,7 +66,7 @@ int GridCell::setAdjacency(GridCell * _s_ptr, GridCell * _e_ptr, GridCell * _n_p
       m_adj_cnt++;
    }
    if (_w_ptr != nullptr) {
-      m_adj_east = _w_ptr;
+      m_adj_west = _w_ptr;
       m_adj_cnt++;
    }
    if (m_adj_cnt < 2) {

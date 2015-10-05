@@ -21,33 +21,43 @@ int main(int argc, char *argv[]) {
    //1) unidirectional -u, bidirectional tracks -b
    //2) channel width -W 
    //3) gui
+   //bool u_gui             = false;
+
    bool u_uni_directional = false;
-   bool u_gui             = false;
    int  u_width           = 8;
+
+   string f_name;
+   ifstream in_file;
 
    char c;
    cout << "Starting the FPGA router... \n" ;
-
-   while ((c = getopt (argc, argv, "uhW:")) != -1) {
+   while ((c = getopt (argc, argv, "ui:W:")) != -1) {
       switch (c) {
          case 'u':
             u_uni_directional = true;
             break;
-         case 'h': //TODO: help menu
-            cout << "\n HELP MENU" ;
-            break;
+         case 'i': 
+            f_name = string(optarg);
+               break;
          case 'W':
             u_width = (int) strtoul(optarg, NULL, 10);
             if (u_width <= 0 || u_width % 2) {
                cout << "Must provide a non-zero even number for W\n" ;
-               return EXIT_FAILURE;
+               exit(EXIT_FAILURE);
             }
-         default:
-            cout << "Running the FPGA router with default option... \n" ;
+            break;
       }
    }
+  
+   in_file.open(f_name);
+   if (!in_file.is_open()) {
+         cerr << "Cannot open file - " << f_name << "; please check file exists\n";
+         exit(EXIT_FAILURE);
+   }
 
-   int g_size, ch_width = 0;
+   int g_size = 0;
+   int ch_width = 0;
+
    //Dikstra heap, used for Coarse-Routing
    priority_queue<GridCell*, vector<GridCell*>, CellCompByPathCost> s_cr_heap;
    //Nets to route
@@ -55,44 +65,56 @@ int main(int argc, char *argv[]) {
 
    //parse standard input
    string line;
-   while(getline(cin, line)) {
+   while(getline(in_file,line)) {
       istringstream iss(line);
       if (!g_size) {
          if (!(iss >> g_size)) {
-            cerr << "ERROR: Failed to parse grid size... exiting...";
+            cerr << "I/O Error: Failed to parse grid size... exiting...\n";
             exit(EXIT_FAILURE);
          }
          continue;
       } 
       if (!ch_width) {
          if (!(iss >> ch_width)) {
-            cerr << "ERROR: Failed to parse channel width... exiting...";
+            cerr << "I/O Error: Failed to parse channel width... exiting...\n";
             exit(EXIT_FAILURE);
          }
          continue;
       } 
 
-      int net_id = 1;
       int s_x, s_y, s_p, t_x, t_y, t_p;
-
+      int net_id = 1;
       //remember to 
-      if (iss >> s_y >> s_x >> s_p >> t_y >> t_x >> t_p) {
+      if (!(iss >> s_x >> s_y >> s_p >> t_x >> t_y >> t_p)) {
+         cerr << "I/O Error: Failed to parse a path definition... exiting...\n";
+         cerr << "Line: "  << line << "\n";
+         exit(EXIT_FAILURE);
+      } else {
          GridNet net(net_id, (2*s_x + 1), (2*s_y + 1), (s_p - 1), (2*t_x + 1), (2*t_y + 1), (t_p - 1));
          g_fpga_nets.push_back(net);
          ++net_id;
-      } else {
-         cerr << "ERROR: Failed to parse a path definition... exiting...";
-         exit(EXIT_FAILURE);
+
       }
    }
 
-   //TODO: use command parameters
+   if (in_file.bad()) {
+      cerr << "I/O Error: There was a problem(s) with reading the file - " << f_name << "\n"; 
+      exit(EXIT_FAILURE);
+   }
+   in_file.close();
+   cout << "Okay: finished parsing the router input file : " << f_name << "\n"; 
+   cout << "Grid Size (by LB): " << g_size << "\n"; 
+   cout << "Channel width : " << ch_width << "\n"; 
+   cout << "Number of nets : " << g_fpga_nets.size() << "\n"; 
+
+   //set input parameters
    GridCell::s_ch_width  = ch_width;
-   GridCell::s_uni_track = false;
+   GridCell::s_uni_track = u_uni_directional;
 
    int grid_dim = 2 * g_size + 1;
 
    build_FPGA_grid(g_fpga_grid, grid_dim);
+   print_FPGA_grid(g_fpga_grid);
 
    //add nets to Dikstra heap to be used for coarse-routing
    for(auto l_it = g_fpga_nets.begin(); l_it != g_fpga_nets.end(); ++l_it) {
@@ -108,8 +130,10 @@ int main(int argc, char *argv[]) {
       Coordinate tgt = net->getTgtCoordinate();
 
       //Start of Dikstra's algorithm for coarse routing
-      g_fpga_grid[src.x][src.y].m_cr_path_cost = 0;
-      s_cr_heap.push(&g_fpga_grid[src.x][src.y]);
+      g_fpga_grid[src.y][src.x].m_cr_path_cost = 0;
+      s_cr_heap.push(&g_fpga_grid[src.y][src.x]);
+      cout << "\nCR ROUTING INFO: Routing net_id = " << net->m_net_id << "; src("  << src.x << ", " << src.y << ", " << src.p << ");" \
+      << " tgt("  << tgt.x << ", " << tgt.y << ", " << tgt.p << "); \n\n";
 
       while (!s_cr_heap.empty()) {
          GridCell* c = s_cr_heap.top();
@@ -119,35 +143,59 @@ int main(int argc, char *argv[]) {
          //Check if c is the target cell;
          Coordinate tmp(c->m_x_pos, c->m_y_pos, tgt.p);
          if (tmp == tgt) {
+            cout << "CR ROUTING INFO: Target net at (" << tgt.x << ", " << tgt.y  << ") found\n";
             while(c != nullptr) { //back_track
                c->addCrNet(net); 
                net->m_cr_graph.push_front(c);
                c = c->m_cr_pred;
             } 
             //validate if c is now pointing to the source cell
-            if (c->m_x_pos == src.x && c->m_y_pos == src.y) {
+            if ((net->m_cr_graph.front()->m_x_pos == src.x) && (net->m_cr_graph.front()->m_y_pos == src.y)) {
                if(net->generateDrTree() == EXIT_FAILURE) {
-                  cout << "DR ROUTING: failed to expand the following net.\n";
+                  cout << "CR ROUTING: failed to expand the following net.\n";
                   cout << "NetID: " << net->m_net_id << "\n";
+                  net->printCrGraph();
                } else {
-	              success = true;
+	               success = true;
+                  cout << "CR ROUTING SUCCESS: following net is coarse-routed and expanded\n";
+                  cout << "NetID: " << net->m_net_id << "\n";
+                  net->printCrGraph();
                }
                break;
             } else {
               cerr << "CR ROUTING ERROR: cell src does not match expected coordinate when back-tracked\n";
               cerr << "NetID: " << net->m_net_id << "\n";
+              cerr << "src("  << src.x << ", " << src.y << ", " << src.p << "); front(" << net->m_cr_graph.front()->m_x_pos << \
+              ", " << net->m_cr_graph.front()->m_y_pos << ")\n";
+
+              net->printCrGraph();
               exit(EXIT_FAILURE);
             }
          }
 
          //Iterate over c's adjacent neighbors
          vector<GridCell*> adj_cells = c->getCrAdjCells(src.p);
+         cout << "DEBUG GR: expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
+         //cout << "DEBUG GR: C adj_cnt =" << c->m_adj_cnt << "\n";
+         //cout << "DEBUG GR: C adj_south =" << c->m_adj_south << "\n";
+         //cout << "DEBUG GR: C adj_east =" << c->m_adj_east << "\n";
+         //cout << "DEBUG GR: C adj_north =" << c->m_adj_north << "\n";
+         //cout << "DEBUG GR: C adj_west =" << c->m_adj_west << "\n";
+         //cout << "DEBUG GR: adj_cells.begin() value  = " << *(adj_cells.begin()) << "\n";
+         cout << "DEBUG GR: adj_cells.size() = " << adj_cells.size() << "\n";
+
          for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter ) {
+            cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
+            if ((*iter)->m_cr_reached) {
+               cout << " REACHED\n";
+               continue;
+            }
             int tmp_dist = c->m_cr_path_cost + (*iter)->getCrCellCost(tgt.p, c);
-            if (tmp_dist < (*iter)->m_cr_path_cost && !((*iter)->m_cr_reached)) {
+            if (tmp_dist < (*iter)->m_cr_path_cost) {
                (*iter)->m_cr_pred = c;
                (*iter)->m_cr_path_cost = tmp_dist;
             }
+            cout << "\n";
             s_cr_heap.push(*iter);
          }
       } //end cr_heap while loop
@@ -170,4 +218,3 @@ int main(int argc, char *argv[]) {
 
    return EXIT_SUCCESS;
 }
-

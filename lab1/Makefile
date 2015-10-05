@@ -1,6 +1,6 @@
 CC = g++
-CFLAGS = -g -c -Wall -O2 -std=c++11
-LDFLAGS = -g -Wall -O2
+CFLAGS = -g -O0 -c -Wall -std=c++11
+LDFLAGS = -g -Wall 
 EXE = router
 
 #HDR = src/graphics.h src/easygl_constants.h
@@ -27,3 +27,4 @@ $(EXE) : $(OBJ_FILES)
 
 clean:
 	rm -r bin
+	rm -f router

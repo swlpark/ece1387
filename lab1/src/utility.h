@@ -12,8 +12,10 @@
 #include "fpga_router.h"
 #include "utility.h"
 
+void        build_FPGA_grid (std::vector<std::vector<GridCell>> &grid, int grid_dim);
+void        print_FPGA_grid (std::vector<std::vector<GridCell>> &grid);
+std::string tostring_cell_type (GridCell * cell) ;
 
-void build_FPGA_grid (std::vector<std::vector<GridCell>> &grid, int grid_dim);
 int  matchAdjacentPin (int src_o_pin, GridCell * source , GridCell * target);
 
 //Graphics-related
