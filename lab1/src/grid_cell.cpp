@@ -144,9 +144,11 @@ std::vector<GridCell*> GridCell::getCrAdjCells(int src_lb_pin) {
    return ptr_vec;
 }
 
-int GridCell::getCrCellCost(int tgt_lb_pin, const GridCell * src_cell) {
+int GridCell::getCrCellCost(int tgt_lb_x, int tgt_lb_y, int tgt_lb_pin, const GridCell * src_cell) {
    switch (m_type) {
       case CellType::LOGIC_BLOCK : //LB reachable with a given target pin
+         if (!(tgt_lb_x == m_x_pos && tgt_lb_y == m_y_pos)) //if LB is not target cell, then LB is unreachable
+            return std::numeric_limits<int>::max();
          switch(tgt_lb_pin) {
            case SOUTH:
              if (m_adj_south == src_cell)
@@ -249,6 +251,11 @@ int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_ce
    //src track number on each side
    int track_idx = src_pin % s_ch_width;
    int tgt_pin = 0; 
+   if (m_pin_list[tgt_pin].routed) {
+      std::cout << "GetOutputPin: output pin " << tgt_pin << " already occupied;" \
+       << "cell at (" << m_x_pos << ", " << m_y_pos << ")\n";
+      return EXPAND_FAIL;
+   }
 
    if (m_type == CellType::H_CHANNEL) {
       if (tgt_cell->m_type == CellType::LOGIC_BLOCK) {
@@ -304,6 +311,8 @@ int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_ce
    } 
 
    if (m_pin_list[tgt_pin].routed) {
+      std::cout << "GetOutputPin: output pin " << tgt_pin << " already occupied;" \
+       << "cell  at (" << m_x_pos << ", " << m_y_pos << ")\n";
       return EXPAND_FAIL;
    }
    m_pin_list[src_pin].net_ref_cnt++;

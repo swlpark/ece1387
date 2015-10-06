@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
 
    //parse standard input
    string line;
+   int net_id = 1;
    while(getline(in_file,line)) {
       istringstream iss(line);
       if (!g_size) {
@@ -82,7 +83,6 @@ int main(int argc, char *argv[]) {
       } 
 
       int s_x, s_y, s_p, t_x, t_y, t_p;
-      int net_id = 1;
       //remember to 
       if (!(iss >> s_x >> s_y >> s_p >> t_x >> t_y >> t_p)) {
          cerr << "I/O Error: Failed to parse a path definition... exiting...\n";
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
       //Start of Dikstra's algorithm for coarse routing
       g_fpga_grid[src.y][src.x].m_cr_path_cost = 0;
       s_cr_heap.push(&g_fpga_grid[src.y][src.x]);
-      cout << "\nROUTING INFO: Routing net_id = " << net->m_net_id << "; src("  << src.x << ", " << src.y << ", " << src.p << ");" \
+      cout << "\nROUTING INFO: Routing net_id = " << net->m_net_id << ", line_dist = " << net->getLineDistance() << "; " <<" src( "  << src.x << ", " << src.y << ", " << src.p << ");" \
       << " tgt("  << tgt.x << ", " << tgt.y << ", " << tgt.p << "); \n\n";
 
       while (!s_cr_heap.empty()) {
@@ -170,14 +170,15 @@ int main(int argc, char *argv[]) {
                cout << " REACHED\n";
                continue;
             }
-            if ((*iter)->getCrCellCost(tgt.p, c) == numeric_limits<int>::max()) {
+            if ((*iter)->getCrCellCost(tgt.x, tgt.y, tgt.p, c) == numeric_limits<int>::max()) {
                cout << "NOT ADJACENT TO PIN: " << tgt.p << "\n";
                continue;
             }
-            int tmp_dist = c->m_cr_path_cost + (*iter)->getCrCellCost(tgt.p, c);
+            int tmp_dist = c->m_cr_path_cost + (*iter)->getCrCellCost(tgt.x, tgt.y, tgt.p, c);
             if (tmp_dist < (*iter)->m_cr_path_cost) {
                (*iter)->m_cr_pred = c;
                (*iter)->m_cr_path_cost = tmp_dist;
+               cout << " UPDATE pred=" << "(" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << "), path_cost=" << tmp_dist;
             }
             cout << "\n";
             s_cr_heap.push(*iter);
@@ -191,6 +192,7 @@ int main(int argc, char *argv[]) {
       }
    
       //Clean up grid for next Dikstra run
+      cout << "CR ROUTING: CLEANUP START\n";
       for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
          for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
             c_it->m_cr_path_cost = numeric_limits<int>::max();
@@ -198,6 +200,8 @@ int main(int argc, char *argv[]) {
             c_it->m_cr_reached = false;
          }
       }
+      s_cr_heap= priority_queue <GridCell*, vector<GridCell*>, CellCompByPathCost> (); //reset heap
+      cout << "CR ROUTING: CLEANUP END\n";
    }//end s_net_heap loop
 
    return EXIT_SUCCESS;

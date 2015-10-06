@@ -122,7 +122,7 @@ int GridNet::connectPins() {
          }
       }
       parent = (*it);
-      std::cout << "DEBUG: m_graph.size()=" << m_graph.size() << ", at level- " << lv_cnt  << "\n";
+      //std::cout << "DEBUG: m_graph.size()=" << m_graph.size() << ", at level- " << lv_cnt  << "\n";
       lv_cnt += 1;
    } 
    return EXIT_SUCCESS;

@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
+#include <string>
 
 //Different from LB pin definition from the input definition
 enum CellSide {SOUTH=0, EAST=1, NORTH=2, WEST=3};
@@ -62,7 +63,7 @@ class GridCell {
       bool operator < (const GridCell&) const;
 
       //return "global congestion" cost of using this cell
-      int                    getCrCellCost(int, const GridCell *);
+      int                    getCrCellCost(int, int, int, const GridCell *);
       std::vector<GridCell*> getCrAdjCells(int);                      
 
       int                    addNet     (GridNet *);       //Add a net to the cell
