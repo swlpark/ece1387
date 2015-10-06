@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
    //2) channel width -W 
    //3) gui
    //bool u_gui             = false;
-
    bool u_uni_directional = false;
    int  u_width           = 8;
 
@@ -90,10 +89,10 @@ int main(int argc, char *argv[]) {
          cerr << "Line: "  << line << "\n";
          exit(EXIT_FAILURE);
       } else {
+         cout << "I/O netid=" << net_id << " ;" << s_x << " " << s_y << " " << s_p << " " << t_x << " " << t_y << " " << t_p << "\n";
          GridNet net(net_id, (2*s_x + 1), (2*s_y + 1), (s_p - 1), (2*t_x + 1), (2*t_y + 1), (t_p - 1));
          g_fpga_nets.push_back(net);
          ++net_id;
-
       }
    }
 
@@ -132,7 +131,7 @@ int main(int argc, char *argv[]) {
       //Start of Dikstra's algorithm for coarse routing
       g_fpga_grid[src.y][src.x].m_cr_path_cost = 0;
       s_cr_heap.push(&g_fpga_grid[src.y][src.x]);
-      cout << "\nCR ROUTING INFO: Routing net_id = " << net->m_net_id << "; src("  << src.x << ", " << src.y << ", " << src.p << ");" \
+      cout << "\nROUTING INFO: Routing net_id = " << net->m_net_id << "; src("  << src.x << ", " << src.y << ", " << src.p << ");" \
       << " tgt("  << tgt.x << ", " << tgt.y << ", " << tgt.p << "); \n\n";
 
       while (!s_cr_heap.empty()) {
@@ -142,47 +141,28 @@ int main(int argc, char *argv[]) {
 
          //Check if c is the target cell;
          Coordinate tmp(c->m_x_pos, c->m_y_pos, tgt.p);
-         if (tmp == tgt) {
-            cout << "CR ROUTING INFO: Target net at (" << tgt.x << ", " << tgt.y  << ") found\n";
+         if (tmp == tgt) { //c is matching target, backtrack and expand
+            cout << "ROUTING INFO: Target net at (" << tgt.x << ", " << tgt.y  << ") found\n";
             while(c != nullptr) { //back_track
-               c->addCrNet(net); 
-               net->m_cr_graph.push_front(c);
+               c->addNet(net); 
+               net->insertNode(c);
                c = c->m_cr_pred;
             } 
-            //validate if c is now pointing to the source cell
-            if ((net->m_cr_graph.front()->m_x_pos == src.x) && (net->m_cr_graph.front()->m_y_pos == src.y)) {
-               if(net->generateDrTree() == EXIT_FAILURE) {
-                  cout << "CR ROUTING: failed to expand the following net.\n";
-                  cout << "NetID: " << net->m_net_id << "\n";
-                  net->printCrGraph();
-               } else {
-	               success = true;
-                  cout << "CR ROUTING SUCCESS: following net is coarse-routed and expanded\n";
-                  cout << "NetID: " << net->m_net_id << "\n";
-                  net->printCrGraph();
-               }
-               break;
-            } else {
-              cerr << "CR ROUTING ERROR: cell src does not match expected coordinate when back-tracked\n";
-              cerr << "NetID: " << net->m_net_id << "\n";
-              cerr << "src("  << src.x << ", " << src.y << ", " << src.p << "); front(" << net->m_cr_graph.front()->m_x_pos << \
-              ", " << net->m_cr_graph.front()->m_y_pos << ")\n";
-
-              net->printCrGraph();
-              exit(EXIT_FAILURE);
-            }
+            //validate & expand
+            success = net->routeGraph(src.x, src.y);
+            break;
          }
 
          //Iterate over c's adjacent neighbors
          vector<GridCell*> adj_cells = c->getCrAdjCells(src.p);
-         cout << "DEBUG GR: expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
+         cout << "DEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
          //cout << "DEBUG GR: C adj_cnt =" << c->m_adj_cnt << "\n";
          //cout << "DEBUG GR: C adj_south =" << c->m_adj_south << "\n";
          //cout << "DEBUG GR: C adj_east =" << c->m_adj_east << "\n";
          //cout << "DEBUG GR: C adj_north =" << c->m_adj_north << "\n";
          //cout << "DEBUG GR: C adj_west =" << c->m_adj_west << "\n";
          //cout << "DEBUG GR: adj_cells.begin() value  = " << *(adj_cells.begin()) << "\n";
-         cout << "DEBUG GR: adj_cells.size() = " << adj_cells.size() << "\n";
+         cout << "DEBUG : adj_cells.size() = " << adj_cells.size() << "\n";
 
          for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter ) {
             cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
@@ -205,7 +185,7 @@ int main(int argc, char *argv[]) {
       } //end cr_heap while loop
 
       if (!success) {
-          cout << "CR ROUTING: could'nt reach the destination cell during CR routing \n";
+          cout << "CR ROUTING: could'nt expand to the destination cell during CR routing \n";
           cout << "NetID: " << net->m_net_id << "\n";
           break;
       }

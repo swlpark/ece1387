@@ -3,9 +3,11 @@
 #define EXPAND_FAIL -1
 
 #include <iostream>
+#include <cstdlib>
 #include <iterator>
 #include <vector>
 #include <cmath>
+#include <ctime>
 #include <list>
 #include "utility.h"
 #include "grid_cell.h"
@@ -26,30 +28,16 @@ struct Coordinate {
 };
 
 class GridNet {
-   struct PathTree {
-      GridCell               *node_ptr;
-      int                    path_cost;
-      int                    grp_number;
-      std::vector<PathTree*> children;     
-      std::vector<int>       o_pins;
-
-      PathTree () : children(), o_pins() {
-         node_ptr = nullptr;
-         path_cost = 0;
-         grp_number = 0;
-      }
-      ~PathTree () {
-         for(auto it= children.begin(); it != children.end(); ++it) {
-             delete *it;
-         }
-      }
-
-   };
    int m_line_dist;
 
-   //Detail-Routed Graph (i.e Tree)
+   //Coarse-Routed Graph (i.e. List of connected cells)
+   std::list<GridCell*> m_graph;
+
+   //Pin vector (i.e. edges on m_graph)
    //------------------------------
-   PathTree * m_dr_graph;
+   std::vector<int>       o_pins;
+
+   int        connectPins();
 
    public:
    int m_net_id;
@@ -57,10 +45,6 @@ class GridNet {
    //Source to Target
    int m_src_x, m_src_y, m_src_p;
    int m_tgt_x, m_tgt_y, m_tgt_p;
-   int m_tgt_row, m_target_col, m_target_pin;
-
-   //Coarse-Routed Graph (i.e. List)
-   std::list<GridCell*> m_cr_graph;
 
    static int s_branch_num; //Net branch expand size
 
@@ -68,12 +52,12 @@ class GridNet {
    GridNet(int, int, int, int, int, int, int);
    ~GridNet();
 
-   int        generateDrTree();
    int        getLineDistance();
    Coordinate getSrcCoordinate();
    Coordinate getTgtCoordinate();
-   void       printCrGraph();
+   void       insertNode(GridCell * node);
+   bool       routeGraph(int, int);
+   void       printGraph();
 };
-
 #endif
 

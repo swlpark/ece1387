@@ -45,7 +45,6 @@ GridCell::GridCell(int _x_pos, int _y_pos) : m_x_pos(_x_pos), m_y_pos(_y_pos), m
 }
 
 GridCell::~GridCell() {
-
 }
 
 /*
@@ -79,15 +78,15 @@ int GridCell::setAdjacency(GridCell * _s_ptr, GridCell * _e_ptr, GridCell * _n_p
    if (m_type != CellType::LOGIC_BLOCK) {
       //# of sides * channel_width = num pins
       pin_cnt = s_ch_width * m_adj_cnt;
-      m_pin_list.reserve(pin_cnt);
+      m_pin_list.resize(pin_cnt);
    } else { //4 pins for LB
       pin_cnt = 4; 
    } 
-   m_pin_list.reserve(pin_cnt);
+   m_pin_list.resize(pin_cnt);
    for (int i = 0; i < pin_cnt; ++i ) {
-          m_pin_list.push_back(CellPin());
-          m_pin_list[i].routed = false;
-          m_pin_list[i].net_ref_cnt = 0;
+      m_pin_list.push_back(CellPin());
+      m_pin_list[i].routed = false;
+      m_pin_list[i].net_ref_cnt = 0;
    }
    return EXIT_SUCCESS;
 }
@@ -96,7 +95,7 @@ bool GridCell::operator < (const GridCell & _cell) const{
    return (m_cr_path_cost < _cell.m_cr_path_cost);
 }
 
-int GridCell::addCrNet(GridNet* _net) {
+int GridCell::addNet(GridNet* _net) {
    auto iter = std::find(m_net_list.begin(), m_net_list.end(), _net);
    if (iter != m_net_list.end()) {
       m_net_list.push_back(_net);
@@ -106,7 +105,7 @@ int GridCell::addCrNet(GridNet* _net) {
 }
 
 //TODO: finish checking if _net exists
-void GridCell::removeCrNet(GridNet* _net) {
+void GridCell::removeNet(GridNet* _net) {
    m_net_list.remove(_net);
 }
 
@@ -179,6 +178,19 @@ int GridCell::getCrCellCost(int tgt_lb_pin, const GridCell * src_cell) {
    } 
 }
 
+void GridCell::burnPin(int pin) {
+   if (pin < 2*m_adj_cnt) {
+     if((m_pin_list[pin].routed)) {
+       std::cerr << "burnPin ERROR: the given pin number is already used; pin=" << pin << "; Cell: (" \
+       << m_x_pos << ", " << m_y_pos << ");\n";
+     }
+     m_pin_list[pin].routed = true;
+   } else {
+     std::cerr << "burnPin ERROR: pin number out of bound; pin=" << pin << "; Cell: (" \
+     << m_x_pos << ", " << m_y_pos << ");\n";
+   }
+}
+
 /*  TODO: implement uni-directional support
  *  expand on LB=>Channel
  */
@@ -215,8 +227,8 @@ int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, std::vec
    }
 
    //TODO:need mechanism to rotate through edges on each getGrEdgesCall
-   edges.reserve(req_edges);
-   for (int i = _last_pin_idx; i < s_ch_width; ++i) {
+   edges.resize(req_edges);
+   for (int i = 0; i < s_ch_width; ++i) {
       if (edge_cnt >= req_edges) {
          break;
       } else if (!m_pin_list[(i + tgt_side)].routed) {
@@ -226,8 +238,7 @@ int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, std::vec
         m_pin_list[(i + tgt_side)].net_ref_cnt++;
       }
    }
-
-   _last_pin_idx %= s_ch_width;
+   //_last_pin_idx %= s_ch_width;
    return edge_cnt;
 }
 

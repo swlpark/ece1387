@@ -23,7 +23,6 @@ class GridCell {
          int     net_ref_cnt;  //incremented on every expand call made by individual CellNets
       };
 
-
       std::list  <GridNet*>  m_net_list;
       std::vector<CellPin>   m_pin_list;
 
@@ -66,13 +65,13 @@ class GridCell {
       int                    getCrCellCost(int, const GridCell *);
       std::vector<GridCell*> getCrAdjCells(int);                      
 
-      int                    addCrNet     (GridNet *);       //Add a net to the cell
-      void                   removeCrNet  (GridNet *);       //remove a net assigned to this cell
+      int                    addNet     (GridNet *);       //Add a net to the cell
+      void                   removeNet  (GridNet *);       //remove a net assigned to this cell
+      void                   burnPin    (int);             //tag the pin as occupied
 
       //CellNet will call getDrEdges on C and S cells; returns number of edges written to vector
       int           getTrackBundle  (int, const GridCell *, std::vector<int> &); //called when S->C
       int           getOutputPin    (int, int, const GridCell *); //"expand given an input pin, and target cell" 
-
       int           routeDrNet   (int, int) ;           //trigger update to attached nets
 };
 
