@@ -159,10 +159,12 @@ int matchAdjacentPin (int src_o_pin, GridCell * source , GridCell * target) {
       if (target->m_adj_north != nullptr) track_idx += GridCell::s_ch_width;
     } else if (source->m_adj_north == target) {
       //TARGET_SIDE IS SOUTH
-
     } else if (source->m_adj_west == target) {
       //TARGET_SIDE IS EAST
       if (target->m_adj_south != nullptr) track_idx += GridCell::s_ch_width;
+    } else {
+      std::cerr << "matchAdjacentPin : could not find a matching cell... \n";
+      return EXPAND_FAIL;
     }
     return track_idx;
 }

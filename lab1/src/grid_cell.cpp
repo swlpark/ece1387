@@ -320,20 +320,19 @@ int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_ce
    return tgt_pin;
 }
 
-//TODO: implement linear & quadratic cost functions later
 int GridCell::__calcCellCost(bool is_sbox) {
    if (is_sbox) {
       //maximum fan-in for S-Box is (adjacency * s_ch_width / 2)
-      if (m_pin_list.size() == (m_adj_cnt * s_ch_width / 2)) {
+      if (m_net_list.size() == (m_adj_cnt * s_ch_width / 2)) {
          return std::numeric_limits<int>::max();
       } else {
-         return 1;
+         return 2*m_net_list.size();
       }
    } else {
-      if (m_pin_list.size() == s_ch_width) {
+      if (m_net_list.size() == s_ch_width) {
          return std::numeric_limits<int>::max();
       } else {
-         return 1;
+         return 2*m_net_list.size();
       }
    }
 }

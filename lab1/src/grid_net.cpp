@@ -71,6 +71,7 @@ int GridNet::connectPins() {
               //choose one of the available pins randomly
               int r_idx = std::rand() % exp_pins.size();
               o_pins.push_back(exp_pins.at(r_idx)); 
+              parent_pin = exp_pins.at(r_idx); 
             } else { //ROUTING FAIL
                std::cout << "GridNet Info: not enough routing resource(s) on the first channel, @LEVEL=" << lv_cnt << "\n";
                return EXIT_FAILURE;
@@ -89,7 +90,8 @@ int GridNet::connectPins() {
                  return EXIT_FAILURE;
               }
            } else {
-              std::cerr << "GridNet Error: could not find a matching pin..., @LEVEL=" << lv_cnt <<"\n";
+              std::cerr << "*GridNet Error: could not find a matching pin..., @LEVEL=" << lv_cnt <<"\n";
+              std::cerr << "lh_i_pin = " << lh_i_pin <<", parent_pin = " << parent_pin << "\n";
               return EXIT_FAILURE;
            }
          } 
@@ -109,6 +111,7 @@ int GridNet::connectPins() {
             }
          } else {
             std::cerr << "GridNet Error: could not find a matching pin..., @LEVEL=" << lv_cnt <<"\n";
+            std::cerr << "lh_i_pin = " << lh_i_pin <<", parent_pin = " << parent_pin << "\n";
             return EXIT_FAILURE;
          }
       } else if ((*it)-> m_type == CellType::LOGIC_BLOCK) {
