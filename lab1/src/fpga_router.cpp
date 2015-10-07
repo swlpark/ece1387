@@ -120,6 +120,8 @@ int main(int argc, char *argv[]) {
       s_net_heap.push(&(*l_it));
    }
 
+   begin_graphics();
+
    //NOTE: net is solid object here..
 	bool success = false;
    while(!s_net_heap.empty()) {
@@ -156,12 +158,6 @@ int main(int argc, char *argv[]) {
          //Iterate over c's adjacent neighbors
          vector<GridCell*> adj_cells = c->getCrAdjCells(src.p);
          cout << "DEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
-         //cout << "DEBUG GR: C adj_cnt =" << c->m_adj_cnt << "\n";
-         //cout << "DEBUG GR: C adj_south =" << c->m_adj_south << "\n";
-         //cout << "DEBUG GR: C adj_east =" << c->m_adj_east << "\n";
-         //cout << "DEBUG GR: C adj_north =" << c->m_adj_north << "\n";
-         //cout << "DEBUG GR: C adj_west =" << c->m_adj_west << "\n";
-         //cout << "DEBUG GR: adj_cells.begin() value  = " << *(adj_cells.begin()) << "\n";
          cout << "DEBUG : adj_cells.size() = " << adj_cells.size() << "\n";
 
          for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter ) {

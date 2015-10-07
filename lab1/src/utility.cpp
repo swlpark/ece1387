@@ -1,8 +1,8 @@
 #include "utility.h"
 
 constexpr float screen_dim = 1000;
-
 static t_bound_box initial_coords = t_bound_box(0,0,screen_dim,screen_dim); 
+
 
 void build_FPGA_grid (std::vector<std::vector<GridCell>> &grid, int grid_dim) {
 	grid.reserve(grid_dim);
@@ -201,7 +201,6 @@ void drawscreen (void) {
 	//----------------------
 	// Draw Grid Rectangles
 	//----------------------
-
 	const float c_cell_width = screen_dim / g_fpga_grid[0].size();
 	const float c_track_gap = c_cell_width / (GridCell::s_ch_width + 1); 
 	//allow gaps between cell boundaries (+1)
@@ -221,7 +220,6 @@ void drawscreen (void) {
 			else if (c_it->m_type == CellType::LOGIC_BLOCK) {
 				setcolor (LIGHTGREY);
 				fillrect(cell_rect);
-
 				//Draw PINS of LB
 				//if(c_it->m_adj_south != nullptr) {
 				//}
@@ -253,4 +251,14 @@ void drawscreen (void) {
 		row_marker += t_point(0,c_cell_width);
 		cell_rect   = t_bound_box(row_marker, c_cell_width, c_cell_width);
 	}
+
+	//----------------------
+	// Draw Net
+	//----------------------
+	for (auto it = g_fpga_nets.begin(); it != g_fpga_nets.end(); ++it) {
+	   for (auto cell = g_fpga_nets.begin(); it != g_fpga_nets.end(); ++it) {
+      }
+
+
+   }
 }

@@ -12,6 +12,7 @@ GridNet::GridNet() : m_graph(), o_pins() {
    m_tgt_y = 0;
    m_tgt_p = 0;
 
+   m_routed = false;
    m_line_dist = 0;
 }
 
@@ -26,6 +27,7 @@ GridNet::GridNet(int _id, int _s_x, int _s_y, int _s_p, int _t_x, int _t_y, int 
    m_tgt_y = _t_y;
    m_tgt_p = _t_p;
 
+   m_routed = false;
    m_line_dist = sqrt((pow(abs(m_tgt_x - m_src_x), 2) + pow(abs(m_tgt_y - m_src_y), 2)));
 }
 
@@ -163,6 +165,7 @@ bool GridNet::routeGraph(int src_x, int src_y) {
         (*it)->burnPin(o_pins[idx]);
         idx += 1;
      }
+     m_routed = true;
   }
   return success;
 }
