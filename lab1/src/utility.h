@@ -6,6 +6,7 @@
 #include <thread>
 #include <iostream>
 #include <sstream>
+#include <iterator>
 #include "graphics.h"
 #include "grid_net.h"
 #include "grid_cell.h"

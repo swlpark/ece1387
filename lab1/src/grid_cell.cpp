@@ -75,18 +75,22 @@ int GridCell::setAdjacency(GridCell * _s_ptr, GridCell * _e_ptr, GridCell * _n_p
    }
 
    int pin_cnt;
-   if (m_type != CellType::LOGIC_BLOCK) {
+   if (m_type == CellType::LOGIC_BLOCK) {
       //# of sides * channel_width = num pins
-      pin_cnt = s_ch_width * m_adj_cnt;
-      m_pin_list.resize(pin_cnt);
-   } else { //4 pins for LB
       pin_cnt = 4; 
-   } 
+   } else if (m_type == CellType::V_CHANNEL || m_type == CellType::H_CHANNEL){ //4 pins for LB
+      pin_cnt = s_ch_width * m_adj_cnt;
+   } else if (m_type == CellType::SWITCH_BOX) {
+      pin_cnt = s_ch_width * m_adj_cnt;
+   }
+
    m_pin_list.resize(pin_cnt);
+
    for (int i = 0; i < pin_cnt; ++i ) {
-      m_pin_list.push_back(CellPin());
-      m_pin_list[i].routed = false;
-      m_pin_list[i].net_ref_cnt = 0;
+      CellPin a_pin;
+      a_pin.routed = false;
+      a_pin.net_ref_cnt = 0;
+      m_pin_list[i] = a_pin;
    }
    return EXIT_SUCCESS;
 }

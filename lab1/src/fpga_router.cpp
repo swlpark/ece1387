@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
             break;
          case 'i': 
             f_name = string(optarg);
-               break;
+            break;
          case 'W':
             u_width = (int) strtoul(optarg, NULL, 10);
             if (u_width <= 0 || u_width % 2) {
@@ -47,11 +47,11 @@ int main(int argc, char *argv[]) {
             break;
       }
    }
-  
+
    in_file.open(f_name);
    if (!in_file.is_open()) {
-         cerr << "Cannot open file - " << f_name << "; please check file exists\n";
-         exit(EXIT_FAILURE);
+      cerr << "Cannot open file - " << f_name << "; please check file exists\n";
+      exit(EXIT_FAILURE);
    }
 
    int g_size = 0;
@@ -89,13 +89,11 @@ int main(int argc, char *argv[]) {
          cerr << "Line: "  << line << "\n";
          exit(EXIT_FAILURE);
       } else {
-         cout << "I/O netid=" << net_id << " ;" << s_x << " " << s_y << " " << s_p << " " << t_x << " " << t_y << " " << t_p << "\n";
          GridNet net(net_id, (2*s_x + 1), (2*s_y + 1), (s_p - 1), (2*t_x + 1), (2*t_y + 1), (t_p - 1));
          g_fpga_nets.push_back(net);
          ++net_id;
       }
    }
-
    if (in_file.bad()) {
       cerr << "I/O Error: There was a problem(s) with reading the file - " << f_name << "\n"; 
       exit(EXIT_FAILURE);
@@ -120,10 +118,9 @@ int main(int argc, char *argv[]) {
       s_net_heap.push(&(*l_it));
    }
 
-   begin_graphics();
 
    //NOTE: net is solid object here..
-	bool success = false;
+   bool success = false;
    while(!s_net_heap.empty()) {
       GridNet* net = s_net_heap.top();
       s_net_heap.pop();
@@ -133,8 +130,8 @@ int main(int argc, char *argv[]) {
       //Start of Dikstra's algorithm for coarse routing
       g_fpga_grid[src.y][src.x].m_cr_path_cost = 0;
       s_cr_heap.push(&g_fpga_grid[src.y][src.x]);
-      cout << "\nROUTING INFO: Routing net_id = " << net->m_net_id << ", line_dist = " << net->getLineDistance() << "; " <<" src( "  << src.x << ", " << src.y << ", " << src.p << ");" \
-      << " tgt("  << tgt.x << ", " << tgt.y << ", " << tgt.p << "); \n\n";
+      cout << "\nROUTING INFO: Routing net_id = " << net->m_net_id << ", line_dist = " << net->getLineDistance() << "; " \
+      <<" src("  << src.x << ", " << src.y << ", " << src.p << ");"  << " tgt("  << tgt.x << ", " << tgt.y << ", " << tgt.p << "); \n\n";
 
       while (!s_cr_heap.empty()) {
          GridCell* c = s_cr_heap.top();
@@ -145,7 +142,7 @@ int main(int argc, char *argv[]) {
          Coordinate tmp(c->m_x_pos, c->m_y_pos, tgt.p);
          if (tmp == tgt) { //c is matching target, backtrack and expand
             cout << "ROUTING INFO: Target net at (" << tgt.x << ", " << tgt.y  << ") found\n";
-            while(c != nullptr) { //back_track
+            while(c != nullptr) { //back track
                c->addNet(net); 
                net->insertNode(c);
                c = c->m_cr_pred;
@@ -161,32 +158,32 @@ int main(int argc, char *argv[]) {
          cout << "DEBUG : adj_cells.size() = " << adj_cells.size() << "\n";
 
          for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter ) {
-            cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
+            //cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
             if ((*iter)->m_cr_reached) {
-               cout << " REACHED\n";
+               //   cout << " REACHED\n";
                continue;
             }
             if ((*iter)->getCrCellCost(tgt.x, tgt.y, tgt.p, c) == numeric_limits<int>::max()) {
-               cout << "NOT ADJACENT TO PIN: " << tgt.p << "\n";
+               //   cout << "NOT ADJACENT TO PIN: " << tgt.p << "\n";
                continue;
             }
             int tmp_dist = c->m_cr_path_cost + (*iter)->getCrCellCost(tgt.x, tgt.y, tgt.p, c);
             if (tmp_dist < (*iter)->m_cr_path_cost) {
                (*iter)->m_cr_pred = c;
                (*iter)->m_cr_path_cost = tmp_dist;
-               cout << " UPDATE pred=" << "(" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << "), path_cost=" << tmp_dist;
+               //   cout << " UPDATE pred=" << "(" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << "), path_cost=" << tmp_dist;
             }
-            cout << "\n";
+            //cout << "\n";
             s_cr_heap.push(*iter);
          }
       } //end cr_heap while loop
 
       if (!success) {
-          cout << "CR ROUTING: could'nt expand to the destination cell during CR routing \n";
-          cout << "NetID: " << net->m_net_id << "\n";
-          break;
+         cout << "CR ROUTING: could'nt expand to the destination cell during CR routing \n";
+         cout << "NetID: " << net->m_net_id << "\n";
+         break;
       }
-   
+
       //Clean up grid for next Dikstra run
       cout << "CR ROUTING: CLEANUP START\n";
       for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
@@ -199,6 +196,7 @@ int main(int argc, char *argv[]) {
       s_cr_heap= priority_queue <GridCell*, vector<GridCell*>, CellCompByPathCost> (); //reset heap
       cout << "CR ROUTING: CLEANUP END\n";
    }//end s_net_heap loop
+   begin_graphics();
 
    return EXIT_SUCCESS;
 }

@@ -29,20 +29,20 @@ struct Coordinate {
 
 class GridNet {
    int m_line_dist;
-
-   //Pin vector (i.e. edges on m_graph)
-   //------------------------------
-   std::vector<int>       o_pins;
-
-   int        connectPins();
+   int connectPins();
 
    public:
    int m_net_id;
    int m_routed;
 
-   //Coarse-Routed Graph (i.e. List of connected cells)
+   //Routed Graph (i.e. List of connected cells)
    std::list<GridCell*> m_graph;
 
+   //Pin vector (i.e. edges on m_graph)
+   //------------------------------
+   std::vector<int>       o_pins;
+
+ 
    //Source to Target
    int m_src_x, m_src_y, m_src_p;
    int m_tgt_x, m_tgt_y, m_tgt_p;

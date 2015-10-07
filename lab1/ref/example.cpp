@@ -447,5 +447,3 @@ void act_on_mouse_move (float x, float y) {
 void act_on_key_press (char c) {
 	// function to handle keyboard press event, the ASCII character is returned
 	std::cout << "Key press: " << c << std::endl;
-}
-

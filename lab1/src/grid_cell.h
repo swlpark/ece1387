@@ -25,7 +25,6 @@ class GridCell {
       };
 
       std::list  <GridNet*>  m_net_list;
-      std::vector<CellPin>   m_pin_list;
 
       //keeps the last (pin idx + 1) at which the getTrackBundle returned
       static int  _last_pin_idx;
@@ -44,8 +43,8 @@ class GridCell {
       GridCell          *m_adj_north;
       GridCell          *m_adj_west;
 
+      std::vector<CellPin>   m_pin_list;
 
-      //Coarse Routing Scratch
       //------------------------------
       //Dikstra back-tracking ptr
       int         m_cr_path_cost;
@@ -54,6 +53,7 @@ class GridCell {
 
       static int  s_ch_width;
       static bool s_uni_track;
+
 
       GridCell();
       GridCell(int, int) ;

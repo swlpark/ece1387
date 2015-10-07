@@ -51,7 +51,7 @@ Coordinate GridNet::getTgtCoordinate(){
 
 int GridNet::connectPins() {
    if (m_graph.size() < 3) {
-      std::cerr << "GridNet Error: must have +3 nodes on a coarse graph path\n";
+      std::cerr << "GridNet Error: must have +3 nodes on a graph path\n";
       return EXIT_FAILURE;
    }
    o_pins.resize(m_graph.size());
@@ -173,10 +173,14 @@ bool GridNet::routeGraph(int src_x, int src_y) {
 void GridNet::printGraph() {
    if (m_graph.size() > 0) {
      int cnt = 0;
+
+      std::cout << "net_id = " << m_net_id << "; " <<" src("  << m_src_x << ", " << m_src_y << ", " << m_src_p << ");" \
+      << " tgt("  << m_tgt_x << ", " << m_tgt_y << ", " << m_tgt_p << "); \n";
      for(auto it = m_graph.begin(); it != m_graph.end(); ++it) {
-        std::cout << "Level-" << cnt++ << " : " << tostring_cell_type(*it) << "(" << (*it)->m_x_pos << ", " \
-        << (*it)->m_y_pos << ") \n";
+        std::cout << "Level-" << cnt << " : " << tostring_cell_type(*it) << "(" << (*it)->m_x_pos << ", " \
+        << (*it)->m_y_pos << "), pin_cnt=" << (*it)->m_pin_list.size() << ", o_pin=" << o_pins[cnt]<< "\n";
      }
+     cnt++;
    } else {
      std::cout << "GridNet: printGraph() called with zero graph\n";
    }
