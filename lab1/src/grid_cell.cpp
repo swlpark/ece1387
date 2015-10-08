@@ -92,8 +92,9 @@ int GridCell::setAdjacency(GridCell * _s_ptr, GridCell * _e_ptr, GridCell * _n_p
       CellPin a_pin;
       a_pin.routed = false;
       a_pin.net_ref_cnt = 0;
-      m_pin_list[i] = a_pin;
+      m_pin_list.push_back(a_pin);
    }
+  
    return EXIT_SUCCESS;
 }
 
@@ -260,12 +261,13 @@ int GridCell::getCrCellCost(int tgt_lb_x, int tgt_lb_y, int tgt_lb_pin, const Gr
 }
 
 void GridCell::burnPin(int pin) {
-   if (pin < 2*m_adj_cnt) {
-     if((m_pin_list[pin].routed)) {
+   if (pin < m_pin_list.size()) {
+     if((m_pin_list.at(pin).routed)) {
        std::cerr << "burnPin ERROR: the given pin number is already used; pin=" << pin << "; Cell: (" \
        << m_x_pos << ", " << m_y_pos << ");\n";
+       return;
      }
-     m_pin_list[pin].routed = true;
+     m_pin_list.at(pin).routed = true;
    } else {
      std::cerr << "burnPin ERROR: pin number out of bound; pin=" << pin << "; Cell: (" \
      << m_x_pos << ", " << m_y_pos << ");\n";
@@ -348,15 +350,11 @@ int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, std::vec
 /* TODO: implement uni-directional support
 * NOTE: caller make sure that src pin is not on the same side as the target side
 */
+
 int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_cell) {
    //src track number on each side
    int track_idx = src_pin % s_ch_width;
    int tgt_pin = 0; 
-   if (m_pin_list[tgt_pin].routed) {
-      std::cout << "GetOutputPin: output pin " << tgt_pin << " already occupied;" \
-       << "cell at (" << m_x_pos << ", " << m_y_pos << ")\n";
-      return EXPAND_FAIL;
-   }
 
    if (m_type == CellType::H_CHANNEL) {
       if (tgt_cell->m_type == CellType::LOGIC_BLOCK) {
@@ -416,8 +414,8 @@ int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_ce
        << "cell  at (" << m_x_pos << ", " << m_y_pos << ")\n";
       return EXPAND_FAIL;
    }
-   m_pin_list[src_pin].net_ref_cnt++;
-   m_pin_list[tgt_pin].net_ref_cnt++;
+   //m_pin_list[src_pin].net_ref_cnt++;
+   //m_pin_list[tgt_pin].net_ref_cnt++;
    return tgt_pin;
 }
 

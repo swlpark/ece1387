@@ -138,18 +138,81 @@ void GridNet::insertNode(GridCell * node) {
 }
 
 //check if back-tracked source cell matches the graph, and route the cell with real pins
+//bool GridNet::routeGraph(int src_x, int src_y) {
+//  bool success = false;
+//  if ((m_graph.front()->m_x_pos == src_x) && (m_graph.front()->m_y_pos == src_y)) {
+//     if(connectPins() == EXIT_FAILURE) {
+//        std::cout << "NET ROUTING: failed to expand the following net.\n";
+//        std::cout << "NetID: " << m_net_id << "\n";
+//     } else {
+//        success = true;
+//        std::cout << "NET ROUTING SUCCESS: following net is coarse-routed and expanded\n";
+//        std::cout << "NetID: " << m_net_id << "\n";
+//     }
+//  } else {
+//    std::cerr << "NET ROUTING ERROR: cell src does not match expected coordinate when back-tracked\n";
+//    std::cerr << "NetID: " << m_net_id << "\n";
+//    std::cerr << "src("  << src_x << ", " << src_y << "); front(" << m_graph.front()->m_x_pos << \
+//    ", " << m_graph.front()->m_y_pos << ")\n";
+//  }
+//  printGraph();
+//
+//  //If successful, tag the pin on the cell
+//  if (success) {
+//     int idx = 0;
+//     for(auto it = m_graph.begin(); it != m_graph.end(); ++it) {
+//        (*it)->burnPin(o_pins[idx]);
+//        idx += 1;
+//     }
+//     m_routed = true;
+//  }
+//  return success;
+//}
+
+//check if back-tracked source cell matches the graph, and route the cell with real pins
 bool GridNet::routeGraph(int src_x, int src_y) {
-  bool success = false;
+  m_routed = false;
+
+  //Validate if back-tracked source cell is correct
   if ((m_graph.front()->m_x_pos == src_x) && (m_graph.front()->m_y_pos == src_y)) {
-     if(connectPins() == EXIT_FAILURE) {
-        std::cout << "NET ROUTING: failed to expand the following net.\n";
-        std::cout << "NetID: " << m_net_id << "\n";
-     } else {
-        success = true;
-        std::cout << "NET ROUTING SUCCESS: following net is coarse-routed and expanded\n";
-        std::cout << "NetID: " << m_net_id << "\n";
-     }
-     //break;
+      GridCell * lh_cell = nullptr; //next-hop look-ahead cell
+      GridCell * parent = nullptr;
+      int i_pin, o_pin, parent_pin;
+
+      int lv_cnt = 0;
+
+      //traverse each node to route individual pins on tracks
+      for (auto it = m_graph.begin(); it != m_graph.end(); ++it) {
+         if ((*it)-> m_type == CellType::V_CHANNEL || (*it)->m_type == CellType::H_CHANNEL ) {
+           lh_cell =  *(std::next(it, 1));
+           o_pin = (*it)->getOutputPin((*it)->m_cr_track, m_tgt_p, lh_cell);
+           o_pins.push_back(o_pin);
+           (*it)->burnPin((*it)->m_cr_track);
+           (*it)->burnPin((*it)->m_cr_track + GridCell::s_ch_width);
+         } else if ((*it)-> m_type == CellType::SWITCH_BOX) {
+            lh_cell =  *(std::next(it, 1));
+            i_pin = matchAdjacentPin(parent_pin , parent, (*it));
+            o_pin = (*it)->getOutputPin(i_pin, m_tgt_p, lh_cell);
+            (*it)->burnPin(i_pin);
+            (*it)->burnPin(o_pin);
+            o_pins.push_back(o_pin);
+         } else if ((*it)-> m_type == CellType::LOGIC_BLOCK) {
+            if (it == m_graph.begin()) {//Source LB
+              o_pins.push_back(m_src_p); //start pin
+              (*it)->burnPin(m_src_p);
+            } else if ((it != m_graph.end()) && (it == --m_graph.end()))  { //Target LB
+              o_pins.push_back(0); //end pin
+              (*it)->burnPin(m_tgt_p);
+              m_routed = true;
+            } else {
+               std::cerr << "GridNet Error: LB in the middle of graph\n";
+               return EXIT_FAILURE;
+            }
+         }
+         parent = (*it);
+         parent_pin = o_pin;
+         lv_cnt++;
+    } 
   } else {
     std::cerr << "NET ROUTING ERROR: cell src does not match expected coordinate when back-tracked\n";
     std::cerr << "NetID: " << m_net_id << "\n";
@@ -157,17 +220,7 @@ bool GridNet::routeGraph(int src_x, int src_y) {
     ", " << m_graph.front()->m_y_pos << ")\n";
   }
   printGraph();
-
-  //If successful, tag the pin on the cell
-  if (success) {
-     int idx = 0;
-     for(auto it = m_graph.begin(); it != m_graph.end(); ++it) {
-        (*it)->burnPin(o_pins[idx]);
-        idx += 1;
-     }
-     m_routed = true;
-  }
-  return success;
+  return m_routed;
 }
 
 void GridNet::printGraph() {

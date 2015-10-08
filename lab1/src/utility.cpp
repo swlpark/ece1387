@@ -147,7 +147,6 @@ int matchAdjacentPin (int src_o_pin, GridCell * source , GridCell * target) {
       //TARGET_SIDE IS NORTH
       if (target->m_adj_south != nullptr) track_idx += GridCell::s_ch_width;
       if (target->m_adj_east != nullptr)  track_idx += GridCell::s_ch_width;
-
     } else if (source->m_adj_east == target) {
       //TARGET_SIDE IS WEST
       if (target->m_adj_south != nullptr) track_idx += GridCell::s_ch_width;
@@ -263,10 +262,11 @@ void drawscreen (void) {
              t_point src_point;
              t_point tgt_point;
              int hops = 0;
+
              if ((*i)->m_type == CellType::LOGIC_BLOCK) {
-                int tgt_pin = it->o_pins.at(path_idx+1) % GridCell::s_ch_width;
                 //DRAW LB->x_CH connection
                 if (i == it->m_graph.begin()) {
+                   int tgt_pin = it->o_pins.at(path_idx+1) % GridCell::s_ch_width;
                    //move point to o_pin location
                    switch (it->o_pins.at(path_idx)) {
                       case SOUTH:
@@ -300,7 +300,7 @@ void drawscreen (void) {
                 } else { //CH->LB
 
                 }
-		          setlinestyle (SOLID);
+		setlinestyle (SOLID);
              } else if((*i)->m_type == CellType::V_CHANNEL) { 
                 //move x position to the right exit side (E, W)
                 int side_idx  = it->o_pins.at(path_idx) / GridCell::s_ch_width;

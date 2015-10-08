@@ -89,6 +89,10 @@ int main(int argc, char *argv[]) {
          cerr << "Line: "  << line << "\n";
          exit(EXIT_FAILURE);
       } else {
+         if (s_x < 0 || s_y < 0 || s_p < 0 || t_x < 0 || t_y < 0 || t_p < 0) {
+            cout << "I/O: Reached EOF line\n";
+            break;
+         }
          GridNet net(net_id, (2*s_x + 1), (2*s_y + 1), (s_p - 1), (2*t_x + 1), (2*t_y + 1), (t_p - 1));
          g_fpga_nets.push_back(net);
          ++net_id;
@@ -128,10 +132,10 @@ int main(int argc, char *argv[]) {
       Coordinate tgt = net->getTgtCoordinate();
 
       //Start of Dikstra's algorithm for coarse routing
-      g_fpga_grid[src.y][src.x].m_cr_path_cost = 0;
-      s_cr_heap.push(&g_fpga_grid[src.y][src.x]);
       cout << "\nROUTING INFO: Routing net_id = " << net->m_net_id << ", line_dist = " << net->getLineDistance() << "; " \
       <<" src("  << src.x << ", " << src.y << ", " << src.p << ");"  << " tgt("  << tgt.x << ", " << tgt.y << ", " << tgt.p << "); \n\n";
+      g_fpga_grid[src.y][src.x].m_cr_path_cost = 0;
+      s_cr_heap.push(&g_fpga_grid[src.y][src.x]);
 
       int current_track;
       while (!s_cr_heap.empty()) {
@@ -144,8 +148,8 @@ int main(int argc, char *argv[]) {
          if (tmp == tgt) { //c is matching target, backtrack and expand
             cout << "ROUTING INFO: Target net at (" << tgt.x << ", " << tgt.y  << ") found\n";
             while(c != nullptr) { //back track
-               c->addNet(net); 
-               net->insertNode(c);
+               c->addNet(net);     //for congestion cost calculation
+               net->insertNode(c); //constructing a linked list of path
                c = c->m_cr_pred;
             } 
 
@@ -234,6 +238,7 @@ int main(int argc, char *argv[]) {
       s_cr_heap= priority_queue <GridCell*, vector<GridCell*>, CellCompByPathCost> (); //reset heap
       cout << "MAZE ROUTING: CLEANUP END\n";
    }//end s_net_heap loop
+
    begin_graphics();
 
    return EXIT_SUCCESS;
