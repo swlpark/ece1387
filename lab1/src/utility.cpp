@@ -216,7 +216,7 @@ void drawscreen (void) {
             fillrect(cell_rect);
          }
          else if (c_it->m_type == CellType::LOGIC_BLOCK) {
-            setcolor (LIGHTGREY);
+            setcolor (DARKGREY);
             fillrect(cell_rect);
          }
          else if (c_it->m_type == CellType::H_CHANNEL) {
@@ -304,7 +304,26 @@ void drawscreen (void) {
                         tgt_point.x = tgt_point.x - (c_track_gap * hops);
                         break;
                    }
-                } else { //CH->LB
+                } else { //TODO: CH->LB
+                  src_point = last_point;
+                  tgt_point = c_bot_left;
+                  switch (it->o_pins.at(path_idx-1)) { //Tgt pin is stored in adjacent channel's o_pin
+                     case SOUTH:
+                       tgt_point.x = tgt_point.x + (c_cell_width / 2);
+                       break;
+                     case EAST:
+                       tgt_point.x = tgt_point.x + c_cell_width;
+                       tgt_point.y = tgt_point.y + (c_cell_width / 2);
+                       break;
+                     case NORTH:
+                       tgt_point.x = tgt_point.x + (c_cell_width / 2);
+                       tgt_point.y = tgt_point.y + c_cell_width;
+                       break;
+                     case WEST:
+                       tgt_point.y = tgt_point.y + (c_cell_width / 2);
+                       break;
+                  }
+ 
                 }
                 setlinestyle (SOLID);
              } else if((*i)->m_type == CellType::V_CHANNEL) { 
@@ -315,11 +334,21 @@ void drawscreen (void) {
                       skip = true;
                    } else {
                       //(SB) => (CH) => (LB) net
-                      skip = true;
+                      //move x position to the half point of track
+                      src_point = last_point;
+                      tgt_point = last_point;
+                      if ((*i)->m_adj_east == parent) {
+                         //continue WEST
+                         tgt_point.x = tgt_point.x - (c_cell_width / 2);
+                      } else if ((*i)->m_adj_west == parent) {
+                         //continue EAST
+                         tgt_point.x = tgt_point.x + (c_cell_width / 2);
+                      }
+                      setlinestyle (SOLID);
                    }
                 } else {
                   //(SB) => (CH) => (SB) net
-                  //move x position to the right exit side (E, W)
+                  //move x position to the correct exit side (E, W)
                   int side_idx  = it->o_pins.at(path_idx) / GridCell::s_ch_width;
                   src_point = last_point;
                   tgt_point.y = last_point.y;
@@ -342,12 +371,23 @@ void drawscreen (void) {
                       //(LB) => (CH) => (LB) net
                       skip = true;
                    } else {
-                     //(SB) => (CH) => (LB) net
-                      skip = true;
+                      //(SB) => (CH) => (LB) net
+                      //move y position to the half point of track
+                      src_point = last_point;
+                      tgt_point = last_point;
+                      if ((*i)->m_adj_north == parent) {
+                         //continue SOUTH
+                         tgt_point.y = tgt_point.y - (c_cell_width / 2);
+                      } else if ((*i)->m_adj_west == parent) {
+                         //continue EAST
+                         tgt_point.y = tgt_point.y + (c_cell_width / 2);
+                      }
+
+                      setlinestyle (SOLID);
                    }
                 } else {
                   //(SB) => (CH) => (SB) net
-                  //move y position to the right exit side (S, N)
+                  //move y position to the correct exit side (S, N)
                   int side_idx  = it->o_pins.at(path_idx) / GridCell::s_ch_width;
                   src_point = last_point;
                   tgt_point.x = last_point.x;
@@ -431,19 +471,24 @@ void drawscreen (void) {
              }
 
              //draw src_point to tgt_point
-             if(!skip)
-                drawline(src_point, tgt_point);
+             if(!skip) {
+               drawline(src_point, tgt_point);
+               last_point = tgt_point;
+             } 
 
              //update values for next hop 
              skip = false;
              path_idx += 1;
              parent = (*i);
-             last_point = tgt_point;
          }
-         //TODO: update color index 
+
+         //TODO: update color index with RGB indices
          color_idx++;
          if(color_idx == 10) {
             color_idx = 0;
+         } else if (color_idx == 3) {
+           //skip white 
+           color_idx = 4;
          }
       }//if routed
    } //end of net loop
