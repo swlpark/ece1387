@@ -7,7 +7,7 @@ std::vector<std::vector<GridCell>> g_fpga_grid;
 std::list<GridNet> g_fpga_nets;
 
 bool NetCompByDistance::operator() (GridNet *a, GridNet *b) {
-   return a->getLineDistance() < b->getLineDistance();    
+   return a->getLineDistance() > b->getLineDistance();    
 } 
 
 bool CellCompByPathCost::operator() (GridCell *a, GridCell *b) {

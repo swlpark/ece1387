@@ -92,7 +92,7 @@ int GridCell::setAdjacency(GridCell * _s_ptr, GridCell * _e_ptr, GridCell * _n_p
       CellPin a_pin;
       a_pin.routed = false;
       a_pin.net_ref_cnt = 0;
-      m_pin_list.push_back(a_pin);
+      m_pin_list[i] = a_pin;
    }
   
    return EXIT_SUCCESS;
