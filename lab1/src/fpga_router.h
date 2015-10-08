@@ -29,7 +29,8 @@ class CellCompByPathCost {
 extern std::vector<std::vector<GridCell>> g_fpga_grid;
 
 //Global list of nets
-extern std::list<GridNet> g_fpga_nets;
+extern std::vector<GridNet> g_fpga_nets;
 
+void printNetInfo(int, bool);
 
 #endif 

@@ -29,7 +29,6 @@ struct Coordinate {
 
 class GridNet {
    int m_line_dist;
-   int connectPins();
 
    public:
    int m_net_id;

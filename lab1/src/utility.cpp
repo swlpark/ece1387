@@ -181,9 +181,12 @@ void begin_graphics (void) {
 
    event_loop(NULL, NULL, NULL, drawscreen);   
    t_bound_box old_coords = get_visible_world(); // save the current view for later;
+
 }
 
 void drawscreen (void) {
+   clearscreen();
+
    //----------------------
    // Draw Grid Rectangles
    //----------------------

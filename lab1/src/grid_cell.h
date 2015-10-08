@@ -25,9 +25,6 @@ class GridCell {
       };
 
       std::list  <GridNet*>  m_net_list;
-
-      //keeps the last (pin idx + 1) at which the getTrackBundle returned
-      static int  _last_pin_idx;
       int      __calcCellCost(bool);
 
    public:
@@ -67,12 +64,11 @@ class GridCell {
 
       //return "global congestion" cost of using this cell
       int                    getCellCost (int, int, int, int, const GridCell *);
-      int                    getCrCellCost(int, int, int, const GridCell *);
-      std::vector<GridCell*> getCrAdjCells(int);                      
+      std::vector<GridCell*> getAdjCells(int);                      
 
       int                    addNet     (GridNet *);       //Add a net to the cell
       void                   removeNet  (GridNet *);       //remove a net assigned to this cell
-      void                   burnPin    (int);             //tag the pin as occupied
+      int                    burnPin    (int);             //tag the pin as occupied
 
       int           getTracks (int *);
       //CellNet will call getDrEdges on C and S cells; returns number of edges written to vector

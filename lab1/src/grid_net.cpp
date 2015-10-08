@@ -49,129 +49,98 @@ Coordinate GridNet::getTgtCoordinate(){
    return retval;
 }
 
-int GridNet::connectPins() {
-   if (m_graph.size() < 3) {
-      std::cerr << "GridNet Error: must have +3 nodes on a graph path\n";
-      return EXIT_FAILURE;
-   }
-   o_pins.resize(m_graph.size());
-   std::srand(std::time(0)); //use current time as random seed
-
-   GridCell * lh_cell = nullptr; //next-hop look-ahead cell
-   GridCell * parent = nullptr;
-   int        parent_pin = -1;
-   int        lv_cnt = 0;
-
-   for (auto it = m_graph.begin(); it != m_graph.end(); ++it) {
-      if ((*it)-> m_type == CellType::V_CHANNEL || (*it)->m_type == CellType::H_CHANNEL ) {
-         lh_cell =  *(std::next(it, 1));
-
-         //have to choose a pin on a first run
-         if (parent->m_type == CellType::LOGIC_BLOCK) {
-            std::vector<int> exp_pins;
-            if ((*it)->getTrackBundle(s_branch_num, lh_cell, exp_pins) > 0) {
-              //choose one of the available pins randomly
-              int r_idx = std::rand() % exp_pins.size();
-              o_pins.push_back(exp_pins.at(r_idx)); 
-              parent_pin = exp_pins.at(r_idx); 
-            } else { //ROUTING FAIL
-               std::cout << "GridNet Info: not enough routing resource(s) on the first channel, @LEVEL=" << lv_cnt << "\n";
-               return EXIT_FAILURE;
-            }
-         } else {//expanding path by one hop
-           //mapping parent's o_pin to look-ahead's input pin
-           int lh_i_pin = matchAdjacentPin(parent_pin , parent, (*it));
-           if (lh_i_pin >= 0) {
-              int lh_o_pin;
-              lh_o_pin =(*it)->getOutputPin(lh_i_pin, m_tgt_p, lh_cell);
-              if (lh_o_pin >= 0) {
-                 parent_pin = lh_o_pin;
-                 o_pins.push_back(parent_pin); 
-              } else {
-                 std::cout << "GridNet Info: not enough routing resource(s) on a middle channel, @LEVEL=" << lv_cnt <<"\n";
-                 return EXIT_FAILURE;
-              }
-           } else {
-              std::cerr << "*GridNet Error: could not find a matching pin..., @LEVEL=" << lv_cnt <<"\n";
-              std::cerr << "lh_i_pin = " << lh_i_pin <<", parent_pin = " << parent_pin << "\n";
-              return EXIT_FAILURE;
-           }
-         } 
-      } else if ((*it)-> m_type == CellType::SWITCH_BOX) {
-         lh_cell =  *(std::next(it, 1));
-         //mapping parent's o_pin to look-ahead's input pin
-         int lh_i_pin = matchAdjacentPin(parent_pin , parent, (*it));
-         if (lh_i_pin >= 0) {
-            int lh_o_pin;
-            lh_o_pin =(*it)->getOutputPin(lh_i_pin, m_tgt_p, lh_cell);
-            if (lh_o_pin >= 0) {
-               parent_pin = lh_o_pin;
-               o_pins.push_back(parent_pin); 
-            } else {
-               std::cout << "GridNet Info: not enough routing resource(s) on a middle channel, @LEVEL=" << lv_cnt <<"\n";
-               return EXIT_FAILURE;
-            }
-         } else {
-            std::cerr << "GridNet Error: could not find a matching pin..., @LEVEL=" << lv_cnt <<"\n";
-            std::cerr << "lh_i_pin = " << lh_i_pin <<", parent_pin = " << parent_pin << "\n";
-            return EXIT_FAILURE;
-         }
-      } else if ((*it)-> m_type == CellType::LOGIC_BLOCK) {
-         if (it == m_graph.begin()) {//first
-           o_pins.push_back(m_src_p);
-         } else if ((it != m_graph.end()) && (it == --m_graph.end()))  { //last
-           o_pins.push_back(-1); //-1 = end
-         } else {
-            std::cerr << "GridNet Error: LB in the middle of graph\n";
-            return EXIT_FAILURE;
-         }
-      }
-      parent = (*it);
-      //std::cout << "DEBUG: m_graph.size()=" << m_graph.size() << ", at level- " << lv_cnt  << "\n";
-      lv_cnt += 1;
-   } 
-   return EXIT_SUCCESS;
-}
+//int GridNet::connectPins() {
+//   if (m_graph.size() < 3) {
+//      std::cerr << "GridNet Error: must have +3 nodes on a graph path\n";
+//      return EXIT_FAILURE;
+//   }
+//   o_pins.resize(m_graph.size());
+//   std::srand(std::time(0)); //use current time as random seed
+//
+//   GridCell * lh_cell = nullptr; //next-hop look-ahead cell
+//   GridCell * parent = nullptr;
+//   int        parent_pin = -1;
+//   int        lv_cnt = 0;
+//
+//   for (auto it = m_graph.begin(); it != m_graph.end(); ++it) {
+//      if ((*it)-> m_type == CellType::V_CHANNEL || (*it)->m_type == CellType::H_CHANNEL ) {
+//         lh_cell =  *(std::next(it, 1));
+//
+//         //have to choose a pin on a first run
+//         if (parent->m_type == CellType::LOGIC_BLOCK) {
+//            std::vector<int> exp_pins;
+//            if ((*it)->getTrackBundle(s_branch_num, lh_cell, exp_pins) > 0) {
+//              //choose one of the available pins randomly
+//              int r_idx = std::rand() % exp_pins.size();
+//              o_pins.push_back(exp_pins.at(r_idx)); 
+//              parent_pin = exp_pins.at(r_idx); 
+//            } else { //ROUTING FAIL
+//               std::cout << "GridNet Info: not enough routing resource(s) on the first channel, @LEVEL=" << lv_cnt << "\n";
+//               return EXIT_FAILURE;
+//            }
+//         } else {//expanding path by one hop
+//           //mapping parent's o_pin to look-ahead's input pin
+//           int lh_i_pin = matchAdjacentPin(parent_pin , parent, (*it));
+//           if (lh_i_pin >= 0) {
+//              int lh_o_pin;
+//              lh_o_pin =(*it)->getOutputPin(lh_i_pin, m_tgt_p, lh_cell);
+//              if (lh_o_pin >= 0) {
+//                 parent_pin = lh_o_pin;
+//                 o_pins.push_back(parent_pin); 
+//              } else {
+//                 std::cout << "GridNet Info: not enough routing resource(s) on a middle channel, @LEVEL=" << lv_cnt <<"\n";
+//                 return EXIT_FAILURE;
+//              }
+//           } else {
+//              std::cerr << "*GridNet Error: could not find a matching pin..., @LEVEL=" << lv_cnt <<"\n";
+//              std::cerr << "lh_i_pin = " << lh_i_pin <<", parent_pin = " << parent_pin << "\n";
+//              return EXIT_FAILURE;
+//           }
+//         } 
+//      } else if ((*it)-> m_type == CellType::SWITCH_BOX) {
+//         lh_cell =  *(std::next(it, 1));
+//         //mapping parent's o_pin to look-ahead's input pin
+//         int lh_i_pin = matchAdjacentPin(parent_pin , parent, (*it));
+//         if (lh_i_pin >= 0) {
+//            int lh_o_pin;
+//            lh_o_pin =(*it)->getOutputPin(lh_i_pin, m_tgt_p, lh_cell);
+//            if (lh_o_pin >= 0) {
+//               parent_pin = lh_o_pin;
+//               o_pins.push_back(parent_pin); 
+//            } else {
+//               std::cout << "GridNet Info: not enough routing resource(s) on a middle channel, @LEVEL=" << lv_cnt <<"\n";
+//               return EXIT_FAILURE;
+//            }
+//         } else {
+//            std::cerr << "GridNet Error: could not find a matching pin..., @LEVEL=" << lv_cnt <<"\n";
+//            std::cerr << "lh_i_pin = " << lh_i_pin <<", parent_pin = " << parent_pin << "\n";
+//            return EXIT_FAILURE;
+//         }
+//      } else if ((*it)-> m_type == CellType::LOGIC_BLOCK) {
+//         if (it == m_graph.begin()) {//first
+//           o_pins.push_back(m_src_p);
+//         } else if ((it != m_graph.end()) && (it == --m_graph.end()))  { //last
+//           o_pins.push_back(-1); //-1 = end
+//         } else {
+//            std::cerr << "GridNet Error: LB in the middle of graph\n";
+//            return EXIT_FAILURE;
+//         }
+//      }
+//      parent = (*it);
+//      //std::cout << "DEBUG: m_graph.size()=" << m_graph.size() << ", at level- " << lv_cnt  << "\n";
+//      lv_cnt += 1;
+//   } 
+//   return EXIT_SUCCESS;
+//}
 
 void GridNet::insertNode(GridCell * node) {
    m_graph.push_front(node);
 }
 
 //check if back-tracked source cell matches the graph, and route the cell with real pins
-//bool GridNet::routeGraph(int src_x, int src_y) {
-//  bool success = false;
-//  if ((m_graph.front()->m_x_pos == src_x) && (m_graph.front()->m_y_pos == src_y)) {
-//     if(connectPins() == EXIT_FAILURE) {
-//        std::cout << "NET ROUTING: failed to expand the following net.\n";
-//        std::cout << "NetID: " << m_net_id << "\n";
-//     } else {
-//        success = true;
-//        std::cout << "NET ROUTING SUCCESS: following net is coarse-routed and expanded\n";
-//        std::cout << "NetID: " << m_net_id << "\n";
-//     }
-//  } else {
-//    std::cerr << "NET ROUTING ERROR: cell src does not match expected coordinate when back-tracked\n";
-//    std::cerr << "NetID: " << m_net_id << "\n";
-//    std::cerr << "src("  << src_x << ", " << src_y << "); front(" << m_graph.front()->m_x_pos << \
-//    ", " << m_graph.front()->m_y_pos << ")\n";
-//  }
-//  printGraph();
-//
-//  //If successful, tag the pin on the cell
-//  if (success) {
-//     int idx = 0;
-//     for(auto it = m_graph.begin(); it != m_graph.end(); ++it) {
-//        (*it)->burnPin(o_pins[idx]);
-//        idx += 1;
-//     }
-//     m_routed = true;
-//  }
-//  return success;
-//}
-
-//check if back-tracked source cell matches the graph, and route the cell with real pins
 bool GridNet::routeGraph(int src_x, int src_y) {
   m_routed = false;
+  bool failed = false;
 
   //Validate if back-tracked source cell is correct
   if ((m_graph.front()->m_x_pos == src_x) && (m_graph.front()->m_y_pos == src_y)) {
@@ -183,18 +152,27 @@ bool GridNet::routeGraph(int src_x, int src_y) {
 
       //traverse each node to route individual pins on tracks
       for (auto it = m_graph.begin(); it != m_graph.end(); ++it) {
+         if (failed) {
+            o_pins.push_back(-1); //TAG FAILED
+            continue;
+         }
          if ((*it)-> m_type == CellType::V_CHANNEL || (*it)->m_type == CellType::H_CHANNEL ) {
            lh_cell =  *(std::next(it, 1));
+
            o_pin = (*it)->getOutputPin((*it)->m_cr_track, m_tgt_p, lh_cell);
            o_pins.push_back(o_pin);
-           (*it)->burnPin((*it)->m_cr_track);
-           (*it)->burnPin((*it)->m_cr_track + GridCell::s_ch_width);
+           if ( (*it)->burnPin((*it)->m_cr_track) < 0)
+             failed = true;
+           if ( (*it)->burnPin((*it)->m_cr_track + GridCell::s_ch_width) < 0)
+             failed = true;
          } else if ((*it)-> m_type == CellType::SWITCH_BOX) {
             lh_cell =  *(std::next(it, 1));
             i_pin = matchAdjacentPin(parent_pin , parent, (*it));
             o_pin = (*it)->getOutputPin(i_pin, m_tgt_p, lh_cell);
-            (*it)->burnPin(i_pin);
-            (*it)->burnPin(o_pin);
+            if ((*it)->burnPin(i_pin) < 0)
+              failed = true;
+            if ((*it)->burnPin(o_pin) < 0)
+              failed = true;
             o_pins.push_back(o_pin);
          } else if ((*it)-> m_type == CellType::LOGIC_BLOCK) {
             if (it == m_graph.begin()) {//Source LB
@@ -220,6 +198,10 @@ bool GridNet::routeGraph(int src_x, int src_y) {
     ", " << m_graph.front()->m_y_pos << ")\n";
   }
   printGraph();
+
+  if (failed)
+    m_routed = false;
+
   return m_routed;
 }
 

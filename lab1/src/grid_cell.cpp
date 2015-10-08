@@ -2,7 +2,6 @@
 
 int  GridCell::s_ch_width;
 bool GridCell::s_uni_track;
-int  GridCell::_last_pin_idx = 0;
 
 GridCell::GridCell() : m_x_pos(0), m_y_pos(0), m_net_list(), m_pin_list() {
    m_adj_cnt    = 0;
@@ -116,7 +115,7 @@ void GridCell::removeNet(GridNet* _net) {
 }
 
 //TODO: optimization opportunity in what to push to vector
-std::vector<GridCell*> GridCell::getCrAdjCells(int src_lb_pin) {
+std::vector<GridCell*> GridCell::getAdjCells(int src_lb_pin) {
    std::vector<GridCell*> ptr_vec;
    if (m_type == CellType::LOGIC_BLOCK) {
      switch(src_lb_pin) {
@@ -223,57 +222,22 @@ int GridCell::getCellCost(int tgt_lb_x, int tgt_lb_y, int tgt_lb_pin, int track_
    } 
 }
 
-int GridCell::getCrCellCost(int tgt_lb_x, int tgt_lb_y, int tgt_lb_pin, const GridCell * src_cell) {
-   switch (m_type) {
-      case CellType::LOGIC_BLOCK : //LB reachable with a given target pin
-         //if LB is not target cell, then LB is unreachable
-         if (!(tgt_lb_x == m_x_pos && tgt_lb_y == m_y_pos)) 
-            return std::numeric_limits<int>::max();
-         switch(tgt_lb_pin) {
-           case SOUTH:
-             if (m_adj_south == src_cell)
-               return 1;
-             else
-               return std::numeric_limits<int>::max();
-           case EAST:
-             if (m_adj_east == src_cell)
-               return 1;
-             else
-               return std::numeric_limits<int>::max();
-           case NORTH:
-             if (m_adj_north == src_cell)
-               return 1;
-             else
-               return std::numeric_limits<int>::max();
-           case WEST:
-             if (m_adj_west == src_cell)
-               return 1;
-             else
-               return std::numeric_limits<int>::max();
-         }
-      case CellType::V_CHANNEL :
-         return __calcCellCost(false);
-      case CellType::H_CHANNEL :
-         return __calcCellCost(false);
-      case CellType::SWITCH_BOX :
-         return __calcCellCost(true);
-   } 
-}
-
-void GridCell::burnPin(int pin) {
+int GridCell::burnPin(int pin) {
    if (pin < m_pin_list.size()) {
      if((m_pin_list.at(pin).routed)) {
        std::cerr << "burnPin ERROR: the given pin number is already used; pin=" << pin << "; Cell: (" \
        << m_x_pos << ", " << m_y_pos << ");\n";
-       return;
+       return -1;
      }
      m_pin_list.at(pin).routed = true;
    } else {
      std::cerr << "burnPin ERROR: pin number out of bound; pin=" << pin << "; Cell: (" \
      << m_x_pos << ", " << m_y_pos << ");\n";
+     return -1;
    }
+   return 1;
 }
-/*  TODO: implement uni-directional support
+/*
  *  expand on LB=>Channel
  */
 int GridCell::getTracks (int * tracks) {
@@ -296,61 +260,9 @@ int GridCell::getTracks (int * tracks) {
    return cnt;
 }
 
-/*  TODO: implement uni-directional support
- *  expand on LB=>Channel
- */
-int GridCell::getTrackBundle (int req_edges, const GridCell * tgt_cell, std::vector<int> & edges) {
-   //edges simply are the output pins of this cell
-   int edge_cnt = 0;
-   int tgt_side; 
-
-   if (m_type == CellType::H_CHANNEL) {
-      if (m_adj_south == tgt_cell) {
-        tgt_side = 0; 
-      } else if (m_adj_north == tgt_cell) {
-        tgt_side = s_ch_width; 
-      } else {
-         std::cerr << "ERROR: getTrackBundle called with target that is not adjacent. Cell: (" \
-         << m_x_pos << ", " << m_y_pos << ");\n";
-         return EXPAND_FAIL;
-      }
-   } else if (m_type == CellType::V_CHANNEL) {
-      if (m_adj_east == tgt_cell) {
-        tgt_side = 0; 
-      } else if (m_adj_west == tgt_cell) {
-        tgt_side = s_ch_width; 
-      } else {
-         std::cerr << "ERROR: getTrackBundle called with target that is not adjacent. Cell: (" \
-         << m_x_pos << ", " << m_y_pos << ");\n";
-         return EXPAND_FAIL;
-      }
-
-   } else {
-      std::cerr << "ERROR: getTrackBundle called on a cell that is not a channel ( " \
-      << m_x_pos << ", " << m_y_pos << ");\n";
-      return EXPAND_FAIL;
-   }
-
-   //TODO:need mechanism to rotate through edges on each getGrEdgesCall
-   edges.resize(req_edges);
-   for (int i = 0; i < s_ch_width; ++i) {
-      if (edge_cnt >= req_edges) {
-         break;
-      } else if (!m_pin_list[(i + tgt_side)].routed) {
-        ++edge_cnt;
-        edges.push_back((i + tgt_side));
-        m_pin_list[i].net_ref_cnt++;
-        m_pin_list[(i + tgt_side)].net_ref_cnt++;
-      }
-   }
-   //_last_pin_idx %= s_ch_width;
-   return edge_cnt;
-}
-
 /* TODO: implement uni-directional support
 * NOTE: caller make sure that src pin is not on the same side as the target side
 */
-
 int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_cell) {
    //src track number on each side
    int track_idx = src_pin % s_ch_width;
@@ -414,6 +326,7 @@ int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_ce
        << "cell  at (" << m_x_pos << ", " << m_y_pos << ")\n";
       return EXPAND_FAIL;
    }
+
    //m_pin_list[src_pin].net_ref_cnt++;
    //m_pin_list[tgt_pin].net_ref_cnt++;
    return tgt_pin;
