@@ -42,7 +42,6 @@ class GridNet {
    //------------------------------
    std::vector<int>       o_pins;
 
- 
    //Source to Target
    int m_src_x, m_src_y, m_src_p;
    int m_tgt_x, m_tgt_y, m_tgt_p;
@@ -60,5 +59,6 @@ class GridNet {
    bool       routeGraph(int, int);
    void       printGraph();
 };
+
 #endif
 

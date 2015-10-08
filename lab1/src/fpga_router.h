@@ -9,6 +9,8 @@
 #include <cstdlib>
 #include <iterator>
 #include <unistd.h>
+#include <cstdlib>
+#include <ctime>
 #include "grid_net.h"
 #include "grid_cell.h"
 #include "utility.h"

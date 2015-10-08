@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
       cout << "\nROUTING INFO: Routing net_id = " << net->m_net_id << ", line_dist = " << net->getLineDistance() << "; " \
       <<" src("  << src.x << ", " << src.y << ", " << src.p << ");"  << " tgt("  << tgt.x << ", " << tgt.y << ", " << tgt.p << "); \n\n";
 
+      int current_track;
       while (!s_cr_heap.empty()) {
          GridCell* c = s_cr_heap.top();
          s_cr_heap.pop();
@@ -147,6 +148,7 @@ int main(int argc, char *argv[]) {
                net->insertNode(c);
                c = c->m_cr_pred;
             } 
+
             //validate & expand
             success = net->routeGraph(src.x, src.y);
             break;
@@ -157,20 +159,56 @@ int main(int argc, char *argv[]) {
          cout << "DEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
          cout << "DEBUG : adj_cells.size() = " << adj_cells.size() << "\n";
 
-         for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter ) {
+         //SPECIAL ADJACENCY CASE: starting cell must choose a track
+         if (c->m_cr_path_cost == 0 && c->m_type == CellType::LOGIC_BLOCK) {
+            GridCell * first_channel = adj_cells.at(0);
+            if(first_channel->m_type == CellType::SWITCH_BOX || first_channel->m_type == CellType::LOGIC_BLOCK) {
+               cerr << "CRITICAL: FIRST HOP FROM LB is not a channel, C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
+               exit(EXIT_FAILURE);
+            }
+
+            vector<int> tracks;
+            tracks.resize(GridCell::s_ch_width);
+
+            int num_tracks = first_channel->getTracks(&tracks[0]);
+            cout << "INFO: got " << num_tracks << " tracks from, first channel at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
+
+            if (num_tracks > 1) {
+               int r_idx = std::rand() % num_tracks;
+               std::srand(std::time(0)); //use current time as rand seed
+               current_track = tracks.at(r_idx);
+               cout << "INFO: using " << r_idx << "-th track, from the returned list; track_num=" << current_track << "\n";
+            } else if (num_tracks == 1) {
+               current_track = tracks.at(0);
+               cout << "INFO: using one track from the returned list; track_num=" << current_track << "\n";
+            } else if (num_tracks == 0) {
+               cout << "INFO: OUT OF available tracks, exiting ... \n";
+               break;
+            }
+            
+            //update Dikstra node fields, and continue loop
+            first_channel->m_cr_pred = c;
+            first_channel->m_cr_path_cost = 1;
+            first_channel->m_cr_track = current_track;
+            s_cr_heap.push(first_channel);
+            continue;
+         }
+
+         for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter) {
             //cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
             if ((*iter)->m_cr_reached) {
                //   cout << " REACHED\n";
                continue;
             }
-            if ((*iter)->getCrCellCost(tgt.x, tgt.y, tgt.p, c) == numeric_limits<int>::max()) {
+            if ((*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c) == numeric_limits<int>::max()) {
                //   cout << "NOT ADJACENT TO PIN: " << tgt.p << "\n";
                continue;
             }
-            int tmp_dist = c->m_cr_path_cost + (*iter)->getCrCellCost(tgt.x, tgt.y, tgt.p, c);
+            int tmp_dist = c->m_cr_path_cost + (*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c);
             if (tmp_dist < (*iter)->m_cr_path_cost) {
                (*iter)->m_cr_pred = c;
                (*iter)->m_cr_path_cost = tmp_dist;
+               (*iter)->m_cr_track = current_track;
                //   cout << " UPDATE pred=" << "(" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << "), path_cost=" << tmp_dist;
             }
             //cout << "\n";
@@ -179,13 +217,13 @@ int main(int argc, char *argv[]) {
       } //end cr_heap while loop
 
       if (!success) {
-         cout << "CR ROUTING: could'nt expand to the destination cell during CR routing \n";
+         cout << "ROUTING: couldn't expand to the destination cell during CR routing \n";
          cout << "NetID: " << net->m_net_id << "\n";
          break;
       }
 
       //Clean up grid for next Dikstra run
-      cout << "CR ROUTING: CLEANUP START\n";
+      cout << "MAZE ROUTING: CLEANUP START\n";
       for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
          for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
             c_it->m_cr_path_cost = numeric_limits<int>::max();
@@ -194,7 +232,7 @@ int main(int argc, char *argv[]) {
          }
       }
       s_cr_heap= priority_queue <GridCell*, vector<GridCell*>, CellCompByPathCost> (); //reset heap
-      cout << "CR ROUTING: CLEANUP END\n";
+      cout << "MAZE ROUTING: CLEANUP END\n";
    }//end s_net_heap loop
    begin_graphics();
 

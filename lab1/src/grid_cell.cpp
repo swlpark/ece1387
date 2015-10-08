@@ -14,6 +14,7 @@ GridCell::GridCell() : m_x_pos(0), m_y_pos(0), m_net_list(), m_pin_list() {
    m_cr_path_cost = std::numeric_limits<int>::max();
    m_cr_pred      = nullptr;
    m_cr_reached   = false;
+   m_cr_track     = 0;
 
    m_type = CellType::LOGIC_BLOCK;
 }
@@ -28,6 +29,7 @@ GridCell::GridCell(int _x_pos, int _y_pos) : m_x_pos(_x_pos), m_y_pos(_y_pos), m
    m_cr_path_cost = std::numeric_limits<int>::max();
    m_cr_pred      = nullptr;
    m_cr_reached   = false;
+   m_cr_track     = 0;
 
    if ((m_x_pos % 2) && (m_y_pos % 2)) {
       //(Odd, Odd)
@@ -108,7 +110,6 @@ int GridCell::addNet(GridNet* _net) {
    return EXIT_FAILURE;
 }
 
-//TODO: finish checking if _net exists
 void GridCell::removeNet(GridNet* _net) {
    m_net_list.remove(_net);
 }
@@ -148,10 +149,84 @@ std::vector<GridCell*> GridCell::getCrAdjCells(int src_lb_pin) {
    return ptr_vec;
 }
 
+int GridCell::getCellCost(int tgt_lb_x, int tgt_lb_y, int tgt_lb_pin, int track_idx, const GridCell * src_cell) {
+   switch (m_type) {
+      case CellType::LOGIC_BLOCK : //LB reachable with a given target pin
+         if (!(tgt_lb_x == m_x_pos && tgt_lb_y == m_y_pos)) 
+            return std::numeric_limits<int>::max();
+         switch(tgt_lb_pin) {
+           case SOUTH:
+             if (m_adj_south == src_cell)
+               return 1;
+             else
+               return std::numeric_limits<int>::max();
+           case EAST:
+             if (m_adj_east == src_cell)
+               return 1;
+             else
+               return std::numeric_limits<int>::max();
+           case NORTH:
+             if (m_adj_north == src_cell)
+               return 1;
+             else
+               return std::numeric_limits<int>::max();
+           case WEST:
+             if (m_adj_west == src_cell)
+               return 1;
+             else
+               return std::numeric_limits<int>::max();
+         }
+      case CellType::V_CHANNEL :
+        if (m_pin_list.at(track_idx).routed)
+           return std::numeric_limits<int>::max();
+        else
+           return __calcCellCost(false);
+      case CellType::H_CHANNEL :
+        if (m_pin_list.at(track_idx).routed)
+           return std::numeric_limits<int>::max();
+        else
+           return __calcCellCost(false);
+      case CellType::SWITCH_BOX :
+         //determine which side src is coming from
+	 if (m_adj_south == src_cell) {
+            if (m_pin_list.at(track_idx).routed) {
+              return std::numeric_limits<int>::max();
+            }
+         } else if (m_adj_east == src_cell) {
+            int check_pin = s_ch_width + track_idx;
+            if (m_adj_south == nullptr) check_pin -= s_ch_width;
+            if (m_pin_list.at(track_idx).routed) {
+              return std::numeric_limits<int>::max();
+            }
+         } else if (m_adj_north == src_cell) {
+            int check_pin = s_ch_width + track_idx;
+            if (m_adj_south == nullptr) check_pin -= s_ch_width;
+            if (m_adj_east == nullptr) check_pin -= s_ch_width;
+            if (m_pin_list.at(track_idx).routed) {
+              return std::numeric_limits<int>::max();
+            }
+         } else if (m_adj_west == src_cell) {
+            int check_pin = s_ch_width + track_idx;
+            if (m_adj_south == nullptr) check_pin -= s_ch_width;
+            if (m_adj_east == nullptr) check_pin -= s_ch_width;
+            if (m_adj_west == nullptr) check_pin -= s_ch_width;
+            if (m_pin_list.at(track_idx).routed) {
+              return std::numeric_limits<int>::max();
+            }
+         } else {
+            std::cerr << "ERROR getCellCost is called with source that is not adjacent, cell(" \
+            << m_x_pos << ", " << m_y_pos << ")\n";
+            return EXPAND_FAIL;
+         }
+         return __calcCellCost(true);
+   } 
+}
+
 int GridCell::getCrCellCost(int tgt_lb_x, int tgt_lb_y, int tgt_lb_pin, const GridCell * src_cell) {
    switch (m_type) {
       case CellType::LOGIC_BLOCK : //LB reachable with a given target pin
-         if (!(tgt_lb_x == m_x_pos && tgt_lb_y == m_y_pos)) //if LB is not target cell, then LB is unreachable
+         //if LB is not target cell, then LB is unreachable
+         if (!(tgt_lb_x == m_x_pos && tgt_lb_y == m_y_pos)) 
             return std::numeric_limits<int>::max();
          switch(tgt_lb_pin) {
            case SOUTH:
@@ -195,6 +270,28 @@ void GridCell::burnPin(int pin) {
      std::cerr << "burnPin ERROR: pin number out of bound; pin=" << pin << "; Cell: (" \
      << m_x_pos << ", " << m_y_pos << ");\n";
    }
+}
+/*  TODO: implement uni-directional support
+ *  expand on LB=>Channel
+ */
+int GridCell::getTracks (int * tracks) {
+   int cnt = 0;
+
+   if (!(m_type == CellType::H_CHANNEL || m_type == CellType::V_CHANNEL)) {
+      std::cerr << "getTracks Error: shouldn't be calling this from a non-channel";
+      return 0;
+   }
+
+   for (int i = 0; i < s_ch_width; ++i) {
+      if (!m_pin_list.at(i).routed) {
+        ++cnt;
+        *tracks = i;
+        ++tracks;
+        m_pin_list[i].net_ref_cnt++;
+        m_pin_list[(i + s_ch_width)].net_ref_cnt++;
+      }
+   }
+   return cnt;
 }
 
 /*  TODO: implement uni-directional support

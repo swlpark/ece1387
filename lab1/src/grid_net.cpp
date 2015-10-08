@@ -178,9 +178,10 @@ void GridNet::printGraph() {
       << " tgt("  << m_tgt_x << ", " << m_tgt_y << ", " << m_tgt_p << "); \n";
      for(auto it = m_graph.begin(); it != m_graph.end(); ++it) {
         std::cout << "Level-" << cnt << " : " << tostring_cell_type(*it) << "(" << (*it)->m_x_pos << ", " \
-        << (*it)->m_y_pos << "), pin_cnt=" << (*it)->m_pin_list.size() << ", o_pin=" << o_pins[cnt]<< "\n";
+        << (*it)->m_y_pos << "), pin_cnt=" << (*it)->m_pin_list.size() << ", o_pin=" << o_pins[cnt] \
+        << " TRACK_NUM=" << (*it)->m_cr_track << "\n";
+        cnt++;
      }
-     cnt++;
    } else {
      std::cout << "GridNet: printGraph() called with zero graph\n";
    }

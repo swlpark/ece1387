@@ -47,9 +47,12 @@ class GridCell {
 
       //------------------------------
       //Dikstra back-tracking ptr
+      //------------------------------
+
       int         m_cr_path_cost;
       GridCell   *m_cr_pred;
       bool        m_cr_reached;
+      int         m_cr_track;
 
       static int  s_ch_width;
       static bool s_uni_track;
@@ -63,6 +66,7 @@ class GridCell {
       bool operator < (const GridCell&) const;
 
       //return "global congestion" cost of using this cell
+      int                    getCellCost (int, int, int, int, const GridCell *);
       int                    getCrCellCost(int, int, int, const GridCell *);
       std::vector<GridCell*> getCrAdjCells(int);                      
 
@@ -70,6 +74,7 @@ class GridCell {
       void                   removeNet  (GridNet *);       //remove a net assigned to this cell
       void                   burnPin    (int);             //tag the pin as occupied
 
+      int           getTracks (int *);
       //CellNet will call getDrEdges on C and S cells; returns number of edges written to vector
       int           getTrackBundle  (int, const GridCell *, std::vector<int> &); //called when S->C
       int           getOutputPin    (int, int, const GridCell *); //"expand given an input pin, and target cell" 
