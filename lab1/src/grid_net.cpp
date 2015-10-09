@@ -167,9 +167,11 @@ bool GridNet::routeGraph(int src_x, int src_y) {
              failed = true;
          } else if ((*it)-> m_type == CellType::SWITCH_BOX) {
             lh_cell =  *(std::next(it, 1));
+            //Locate input pin from src channel at SWITCHBOX
             i_pin = matchAdjacentPin(parent_pin , parent, (*it));
-//            o_pin = (*it)->getOutputPin(i_pin, m_tgt_p, lh_cell);
-            o_pin = (*it)->getOutputPin((*it)->m_cr_track, m_tgt_p, lh_cell);
+            //o_pin = (*it)->getOutputPin(i_pin, m_tgt_p, lh_cell);
+            //o_pin = (*it)->getOutputPin((*it)->m_cr_track, m_tgt_p, lh_cell);
+            o_pin = (*it)->getOutputPin(lh_cell->m_cr_track, m_tgt_p, lh_cell);
             if ((*it)->burnPin(i_pin) < 0)
               failed = true;
             if ((*it)->burnPin(o_pin) < 0)

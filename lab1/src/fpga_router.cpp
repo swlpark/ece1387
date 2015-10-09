@@ -65,7 +65,7 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
 
         //Iterate over c's adjacent neighbors
         std::vector<GridCell*> adj_cells = c->getAdjCells(src.p);
-        std::cout << "\nDEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << "), m_cr_track=" << c->m_cr_track <<"\n";
+        std::cout << "\nDEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << "), m_cr_track=" << c->m_cr_track <<", m_cr_path_cost=" << c->m_cr_path_cost << "\n";
         std::cout << "DEBUG : adj_cells.size() = " << adj_cells.size();
 
         //FIRST channel case: starting cell must choose a track
@@ -101,6 +101,7 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
            }
            
            //update Dikstra node fields, and continue loop
+           c->m_cr_track = current_track;
            first_channel->m_cr_pred = c;
            first_channel->m_cr_path_cost = 1;
            first_channel->m_cr_track = current_track;
@@ -111,6 +112,7 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
            //Back-tracking Dikstra run; attempt with a given track
            current_track = bt_track;
            std::cout << "INFO: Backtracking updated current track to " << current_track << "\n";
+           c->m_cr_track = current_track;
            first_channel->m_cr_pred = c;
            first_channel->m_cr_path_cost = 1;
            first_channel->m_cr_track = current_track;
@@ -223,6 +225,8 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
            c_it->m_cr_path_cost = std::numeric_limits<int>::max();
            c_it->m_cr_pred = nullptr;
            c_it->m_cr_reached = false;
+           //NEW: CHECK
+           c_it->m_cr_track = 0;
         }
      }
      //wavefront= priority_queue <GridCell*, vector<GridCell*>, CellCompByPathCost> (); //reset heap
