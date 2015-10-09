@@ -1,0 +1,12 @@
+
+#build assignment router
+make
+
+#Bi-directional tracks, uses channel width, stated by cct input
+./router -i cct2
+
+#Uni-directional tracks, uses channel width, stated by cct input
+./router -u -i cct2
+
+#Uni-directional tracks, reports minimum channel width and tracks on STDOUT
+./router -s -u -i cct2

@@ -165,7 +165,7 @@ int matchAdjacentPin (int track_idx, GridCell * source , GridCell * target) {
     return pin_idx;
 }
 
-const float c_cell_width = 60;
+const float c_cell_width = 75;
 
 void begin_graphics (void) {
    int  grid_dim = g_fpga_grid[0].size();
