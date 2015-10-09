@@ -338,13 +338,13 @@ int GridCell::__calcCellCost(bool is_sbox) {
       if (m_net_list.size() == (m_adj_cnt * s_ch_width / 2)) {
          return std::numeric_limits<int>::max();
       } else {
-         return 2*m_net_list.size();
+         return 0.5*m_net_list.size();
       }
    } else {
       if (m_net_list.size() == s_ch_width) {
          return std::numeric_limits<int>::max();
       } else {
-         return 2*m_net_list.size();
+         return 0.5*m_net_list.size();
       }
    }
 }

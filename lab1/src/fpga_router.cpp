@@ -7,16 +7,15 @@ std::vector<std::vector<GridCell>> g_fpga_grid;
 std::vector<GridNet> g_fpga_nets;
 
 bool NetCompByDistance::operator() (GridNet *a, GridNet *b) {
-   return a->getLineDistance() > b->getLineDistance();    
+   return a->getLineDistance() < b->getLineDistance();    
 } 
 
 bool CellCompByPathCost::operator() (GridCell *a, GridCell *b) {
-   return (a->m_cr_path_cost) < (b->m_cr_path_cost);
+   return (a->m_cr_path_cost) > (b->m_cr_path_cost);
 } 
 
 void printNetInfo (int net_id, bool new_line) {
   int net_idx = net_id - 1;
-
   std::cout << " net_id = " << net_id << ", line_dist = " << g_fpga_nets.at(net_idx).getLineDistance() << "; " \
   <<" src("  << g_fpga_nets.at(net_idx).m_src_x << ", " << g_fpga_nets.at(net_idx).m_src_y << ", " \
   << g_fpga_nets.at(net_idx).m_src_p << ");"  << " tgt("  << g_fpga_nets.at(net_idx).m_tgt_x << ", " \
@@ -25,14 +24,156 @@ void printNetInfo (int net_id, bool new_line) {
      std::cout << "\n";
 }
 
+/*
+*  Main maze routing function, using Dikstra's shortest path algorithm with back-tracking
+*/
+bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_track, GridNet * net)  {
+    //Dikstra heap, used for Coarse-Routing
+    std::priority_queue<GridCell*, std::vector<GridCell*>, CellCompByPathCost> wavefront;
+
+    int current_track;
+
+    std::vector<int> tracks;
+    std::vector<int> trials;
+
+    //push source node to wavefront
+    g_fpga_grid[src.y][src.x].m_cr_path_cost = 0;
+    wavefront.push(&g_fpga_grid[src.y][src.x]);
+
+    bool success = false;
+    while (!wavefront.empty()) {
+        GridCell* c = wavefront.top();
+        wavefront.pop();
+        c->m_cr_reached = true;
+
+        //Check if c is the target cell;
+        Coordinate tmp(c->m_x_pos, c->m_y_pos, tgt.p);
+        if (tmp == tgt) { //c is matching target, backtrack and expand
+           std::cout << "ROUTING INFO: Target net at (" << tgt.x << ", " << tgt.y  << ") found\n";
+           while(c != nullptr) { //back track
+              c->addNet(net);     //for congestion cost calculation
+              net->insertNode(c); //constructing a linked list of path
+              c = c->m_cr_pred;
+           } 
+           //validate & expand
+           success = net->routeGraph(src.x, src.y);
+           break;
+        }
+
+        //Iterate over c's adjacent neighbors
+        std::vector<GridCell*> adj_cells = c->getAdjCells(src.p);
+        std::cout << "DEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
+        std::cout << "DEBUG : adj_cells.size() = " << adj_cells.size() << "\n";
+
+        //FIRST channel case: starting cell must choose a track
+        if (c->m_cr_path_cost == 0 && c->m_type == CellType::LOGIC_BLOCK && first_trial) {
+           GridCell * first_channel = adj_cells.at(0);
+           if(first_channel->m_type == CellType::SWITCH_BOX || first_channel->m_type == CellType::LOGIC_BLOCK) {
+              std::cerr << "CRITICAL: FIRST HOP FROM LB is not a channel, C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
+              exit(EXIT_FAILURE);
+           }
+
+           tracks.resize(GridCell::s_ch_width);
+           int num_tracks = first_channel->getTracks(&tracks[0]);
+           std::cout << "INFO: got " << num_tracks << " tracks from, first channel at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
+           trials.resize(num_tracks);
+
+           //should we fail to find a route with a chosen track, we will try other tracks later 
+           for(int i = 0; i < num_tracks; ++i) {
+              trials[i] = 0;
+           }
+
+           if (num_tracks > 1) {
+              int r_idx = std::rand() % num_tracks;
+              std::srand(std::time(0)); //use current time as rand seed
+              current_track = tracks.at(r_idx);
+              std::cout << "INFO: using " << r_idx << "-th track, from the returned list; track_num=" << current_track << "\n";
+              trials[r_idx] = 1;
+           } else if (num_tracks == 1) {
+              current_track = tracks.at(0);
+              std::cout << "INFO: using one track from the returned list; track_num=" << current_track << "\n";
+           } else if (num_tracks == 0) {
+              std::cout << "INFO: OUT OF available tracks, exiting ... \n";
+              break;
+           }
+           
+           //update Dikstra node fields, and continue loop
+           first_channel->m_cr_pred = c;
+           first_channel->m_cr_path_cost = 1;
+           first_channel->m_cr_track = current_track;
+           wavefront.push(first_channel);
+           continue;
+        } else if (c->m_cr_path_cost == 0 && c->m_type == CellType::LOGIC_BLOCK && !first_trial) {
+           GridCell * first_channel = adj_cells.at(0);
+           //Back-tracking Dikstra run; attempt with a given track
+           current_track = bt_track;
+           std::cout << "INFO: Backtracking updated current track to" << current_track << "\n";
+           first_channel->m_cr_pred = c;
+           first_channel->m_cr_path_cost = 1;
+           first_channel->m_cr_track = current_track;
+           wavefront.push(first_channel);
+        }
+
+        for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter) {
+           std::cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
+           if ((*iter)->m_cr_reached) {
+              std::cout << " REACHED\n";
+              continue;
+           }
+           if ((*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c) == std::numeric_limits<int>::max()) {
+              std::cout << " NOT ADJACENT TO PIN: " << tgt.p << "\n";
+              continue;
+           }
+           int tmp_dist = c->m_cr_path_cost + (*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c);
+           if (tmp_dist < (*iter)->m_cr_path_cost) {
+              (*iter)->m_cr_pred = c;
+              (*iter)->m_cr_path_cost = tmp_dist;
+              (*iter)->m_cr_track = current_track;
+              //   std::cout << " UPDATE pred=" << "(" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << "), path_cost=" << tmp_dist;
+           }
+           std::cout << "\n";
+           wavefront.push(*iter);
+        }
+     } //end wavefront  loop
+
+     //Clean up grid for next Dikstra run
+     for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
+        for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
+           c_it->m_cr_path_cost = std::numeric_limits<int>::max();
+           c_it->m_cr_pred = nullptr;
+           c_it->m_cr_reached = false;
+        }
+     }
+     //wavefront= priority_queue <GridCell*, vector<GridCell*>, CellCompByPathCost> (); //reset heap
+
+     int cnt=1;
+     if(!success && first_trial) {
+       std::cout << "NET_ID= "<< net->m_net_id << ";First run with track=" << current_track << " didn't work, so we are backtracking with other tracks.\n";
+       std::cout << "DEBUG: tracks.size()=" << tracks.size() << "\n";
+       for(int t=0; t < trials.size(); t++) {
+          if (trials.at(t) == 1) continue;
+
+          if(dikstraMazeRoute(src, tgt, false, tracks.at(t) , net))
+            return true;
+          else {
+            std::cout << "\nNET_ID= "<< net->m_net_id << ";Backtracking " <<  cnt << "-th time, and it didin't work, current_track=" << current_track << "\n\n";
+            cnt++;
+          }
+          if (t > GridCell::s_ch_width) {
+            std::cerr << "Backtracked more than there is available tracks... CRITICAL ERROR...\n";
+            return false;
+          }
+       }
+     }
+     return success;
+}
+
 int main(int argc, char *argv[]) {
    using namespace std;
-
    //Command Line option parsing:
    //1) unidirectional -u, bidirectional tracks -b
    //2) channel width -W 
    //3) gui
-   //bool u_gui             = false;
    bool u_uni_directional = false;
    int  u_width           = 8;
 
@@ -68,10 +209,8 @@ int main(int argc, char *argv[]) {
    int g_size = 0;
    int ch_width = 0;
 
-   //Dikstra heap, used for Coarse-Routing
-   priority_queue<GridCell*, vector<GridCell*>, CellCompByPathCost> s_cr_heap;
    //Nets to route
-   priority_queue<GridNet*, vector<GridNet*>, NetCompByDistance> s_net_heap;
+   priority_queue<GridNet*, vector<GridNet*>, NetCompByDistance> net_heap;
 
    //parse standard input
    string line;
@@ -128,159 +267,32 @@ int main(int argc, char *argv[]) {
    build_FPGA_grid(g_fpga_grid, grid_dim);
    print_FPGA_grid(g_fpga_grid);
 
-   //add nets to Dikstra heap to be used for coarse-routing
+   //add nets to heap to be used for coarse-routing
    for(auto l_it = g_fpga_nets.begin(); l_it != g_fpga_nets.end(); ++l_it) {
-      s_net_heap.push(&(*l_it));
+      net_heap.push(&(*l_it));
    }
-
 
    int fail_cnt = 0;
    //NOTE: net is solid object here..
-   bool success = false;
-   while(!s_net_heap.empty()) {
-      GridNet* net = s_net_heap.top();
-      s_net_heap.pop();
-      Coordinate src = net->getSrcCoordinate();
-      Coordinate tgt = net->getTgtCoordinate();
+   while(!net_heap.empty()) {
+     GridNet* net = net_heap.top();
+     net_heap.pop();
+     Coordinate src = net->getSrcCoordinate();
+     Coordinate tgt = net->getTgtCoordinate();
 
-      //Start of Dikstra's algorithm for coarse routing
-      cout << "\n//-----------------------------------------------------------//\n";
-      cout << "//Start routing";
-      printNetInfo(net->m_net_id, true);
-      cout << "//-----------------------------------------------------------//\n";
-
-      g_fpga_grid[src.y][src.x].m_cr_path_cost = 0;
-      s_cr_heap.push(&g_fpga_grid[src.y][src.x]);
-
-     int current_track;
-     int bt_trials = -1; //number of remaining backtracking tracks...
-
-     vector<int> tracks;
-     vector<int> tried;
-     while (!s_cr_heap.empty()) {
-         GridCell* c = s_cr_heap.top();
-         s_cr_heap.pop();
-         c->m_cr_reached = true;
-
-         //Check if c is the target cell;
-         Coordinate tmp(c->m_x_pos, c->m_y_pos, tgt.p);
-         if (tmp == tgt) { //c is matching target, backtrack and expand
-            cout << "ROUTING INFO: Target net at (" << tgt.x << ", " << tgt.y  << ") found\n";
-            while(c != nullptr) { //back track
-               c->addNet(net);     //for congestion cost calculation
-               net->insertNode(c); //constructing a linked list of path
-               c = c->m_cr_pred;
-            } 
-
-            //validate & expand
-            success = net->routeGraph(src.x, src.y);
-            break;
-         }
-
-         //Iterate over c's adjacent neighbors
-         vector<GridCell*> adj_cells = c->getAdjCells(src.p);
-         cout << "DEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
-         cout << "DEBUG : adj_cells.size() = " << adj_cells.size() << "\n";
-
-         //SPECIAL ADJACENCY CASE: starting cell must choose a track
-         if (c->m_cr_path_cost == 0 && c->m_type == CellType::LOGIC_BLOCK && bt_trials == -1) {
-            GridCell * first_channel = adj_cells.at(0);
-            if(first_channel->m_type == CellType::SWITCH_BOX || first_channel->m_type == CellType::LOGIC_BLOCK) {
-               cerr << "CRITICAL: FIRST HOP FROM LB is not a channel, C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
-               exit(EXIT_FAILURE);
-            }
-
-            tracks.resize(GridCell::s_ch_width);
-
-            int num_tracks = first_channel->getTracks(&tracks[0]);
-            cout << "INFO: got " << num_tracks << " tracks from, first channel at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
-            tried.resize(num_tracks);
-
-            //should we fail to find a route with a chosen track, we will try other tracks later 
-            bt_trials = num_tracks - 1;
-            for(int i = 0; i < num_tracks; ++i) {
-               tried[i] = 0;
-            }
-
-            if (num_tracks > 1) {
-               int r_idx = std::rand() % num_tracks;
-               std::srand(std::time(0)); //use current time as rand seed
-               current_track = tracks.at(r_idx);
-               cout << "INFO: using " << r_idx << "-th track, from the returned list; track_num=" << current_track << "\n";
-               tried[r_idx] = 1;
-            } else if (num_tracks == 1) {
-               current_track = tracks.at(0);
-               cout << "INFO: using one track from the returned list; track_num=" << current_track << "\n";
-            } else if (num_tracks == 0) {
-               cout << "INFO: OUT OF available tracks, exiting ... \n";
-               break;
-            }
-            
-            //update Dikstra node fields, and continue loop
-            first_channel->m_cr_pred = c;
-            first_channel->m_cr_path_cost = 1;
-            first_channel->m_cr_track = current_track;
-            s_cr_heap.push(first_channel);
-            continue;
-         } else if (c->m_cr_path_cost == 0 && c->m_type == CellType::LOGIC_BLOCK && bt_trials > 0) {
-
-            //Back-tracking Dikstra run; attempt with un-tried tracks;
-            int idx =0;
-            for(auto i = tried.begin(); i != tried.end(); ++i) {
-               if (tried[idx] == 0) {
-                  tried[idx] = 1;
-                  current_track = tracks.at(idx);
-                  cout << "INFO: Backtracing with a new track="  << current_track <<  "\n";
-                  break;
-               }
-               idx++;
-            }
-            --bt_trials;
-         }
-
-         for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter) {
-            cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
-            if ((*iter)->m_cr_reached) {
-                  cout << " REACHED\n";
-               continue;
-            }
-            if ((*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c) == numeric_limits<int>::max()) {
-                  cout << "NOT ADJACENT TO PIN: " << tgt.p << "\n";
-               continue;
-            }
-            int tmp_dist = c->m_cr_path_cost + (*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c);
-            if (tmp_dist < (*iter)->m_cr_path_cost) {
-               (*iter)->m_cr_pred = c;
-               (*iter)->m_cr_path_cost = tmp_dist;
-               (*iter)->m_cr_track = current_track;
-               //   cout << " UPDATE pred=" << "(" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << "), path_cost=" << tmp_dist;
-            }
-            //cout << "\n";
-            s_cr_heap.push(*iter);
-         }
-      } //end cr_heap while loop
-
-      //Clean up grid for next Dikstra run
-      cout << "MAZE ROUTING: CLEANUP START\n";
-      for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
-         for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
-            c_it->m_cr_path_cost = numeric_limits<int>::max();
-            c_it->m_cr_pred = nullptr;
-            c_it->m_cr_reached = false;
-         }
-      }
-      s_cr_heap= priority_queue <GridCell*, vector<GridCell*>, CellCompByPathCost> (); //reset heap
-      cout << "MAZE ROUTING: CLEANUP END\n";
-
-      if (!success) {
-         cout << "ROUTING: couldn't expand to the destination cell during maze routing phase\n";
-         cout << "NetID: " << net->m_net_id << "\n";
-         ++fail_cnt;
-         continue;
-      }
-
-      success = false;
-   }//end s_net_heap loop
+     //Start of Dikstra's algorithm for coarse routing
+     cout << "\n//-----------------------------------------------------------//\n";
+     cout << "//Start routing";
+     printNetInfo(net->m_net_id, true);
+     cout << "//-----------------------------------------------------------//\n";
+ 
+     if (!dikstraMazeRoute(src, tgt, true, 0, net)) {
+        cout << "ROUTING: couldn't expand to the destination cell during maze routing phase\n";
+        cout << "NetID: " << net->m_net_id << "\n";
+        ++fail_cnt;
+        continue;
+     }
+   }//end net_heap loop
 
    begin_graphics();
 
@@ -291,3 +303,4 @@ int main(int argc, char *argv[]) {
 
    return EXIT_SUCCESS;
 }
+
