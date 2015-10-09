@@ -1,7 +1,8 @@
 #include "grid_cell.h"
 
-int  GridCell::s_ch_width;
-bool GridCell::s_uni_track;
+int              GridCell::s_ch_width;
+bool             GridCell::s_uni_track;
+std::vector<int> GridCell::s_track_ref;
 
 GridCell::GridCell() : m_x_pos(0), m_y_pos(0), m_net_list(), m_pin_list() {
    m_adj_cnt    = 0;
@@ -337,13 +338,13 @@ int GridCell::__calcCellCost(bool is_sbox) {
       if (m_net_list.size() == (m_adj_cnt * s_ch_width / 2)) {
          return std::numeric_limits<int>::max();
       } else {
-         return m_net_list.size();
+         return m_net_list.size() / 2;
       }
    } else {
       if (m_net_list.size() == s_ch_width) {
          return std::numeric_limits<int>::max();
       } else {
-         return m_net_list.size();
+         return m_net_list.size() / 2;
       }
    }
 }

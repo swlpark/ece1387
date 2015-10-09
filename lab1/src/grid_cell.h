@@ -51,9 +51,9 @@ class GridCell {
       bool        m_cr_reached;
       int         m_cr_track;
 
-      static int  s_ch_width;
-      static bool s_uni_track;
-
+      static int               s_ch_width;
+      static bool              s_uni_track;
+      static std::vector<int>  s_track_ref;
 
       GridCell();
       GridCell(int, int) ;

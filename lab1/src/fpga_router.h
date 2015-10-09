@@ -7,6 +7,7 @@
 #include <vector>
 #include <queue>
 #include <cstdlib>
+#include <algorithm>
 #include <iterator>
 #include <unistd.h>
 #include <cstdlib>
