@@ -33,6 +33,7 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
     //Dikstra heap, used for Coarse-Routing
     std::priority_queue<GridCell*, std::vector<GridCell*>, CellCompByPathCost> wavefront;
 
+    //for each MazeRoute run, current_track is constant
     int current_track;
 
     std::vector<int> tracks;
@@ -64,8 +65,8 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
 
         //Iterate over c's adjacent neighbors
         std::vector<GridCell*> adj_cells = c->getAdjCells(src.p);
-        std::cout << "DEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << ")\n";
-        std::cout << "DEBUG : adj_cells.size() = " << adj_cells.size() << "\n";
+        std::cout << "\nDEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << "), m_cr_track=" << c->m_cr_track <<"\n";
+        std::cout << "DEBUG : adj_cells.size() = " << adj_cells.size();
 
         //FIRST channel case: starting cell must choose a track
         if (c->m_cr_path_cost == 0 && c->m_type == CellType::LOGIC_BLOCK && first_trial) {
@@ -109,18 +110,22 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
            GridCell * first_channel = adj_cells.at(0);
            //Back-tracking Dikstra run; attempt with a given track
            current_track = bt_track;
-           std::cout << "INFO: Backtracking updated current track to" << current_track << "\n";
+           std::cout << "INFO: Backtracking updated current track to " << current_track << "\n";
            first_channel->m_cr_pred = c;
            first_channel->m_cr_path_cost = 1;
            first_channel->m_cr_track = current_track;
            wavefront.push(first_channel);
+           continue;
         }
 
         for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter) {
-
-           std::cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
+           bool switched_tr = false;
+           int tr = 0;
+           std::cout << "\n-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ") m_cr_track=" << (*iter)->m_cr_track  << ", cr_path_cost=";
+           if ((*iter)->m_cr_path_cost == std::numeric_limits<int>::max()) std::cout << "INF";
+           else std::cout << (*iter)->m_cr_path_cost;
            if ((*iter)->m_cr_reached) {
-              std::cout << " REACHED";
+              std::cout << ", REACHED";
               continue;
            }
 
@@ -129,57 +134,87 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
               if(c->m_type == CellType::V_CHANNEL) {
                  //on ODD track, skip EAST cell
                  if ((c->m_cr_track % 2) && c->m_adj_east == (*iter) ) {
+                    std::cout << ", SKIPPED EAST";
                     continue; 
                  } 
                  //on EVEN track, skip WEST cell
                  else if (!(c->m_cr_track % 2) && c->m_adj_west == (*iter)) {
+                    std::cout << ", SKIPPED WEST";
                     continue; 
                  }
               }
               else if(c->m_type == CellType::H_CHANNEL) {
                  //on ODD track, skip SOUTH cell
                  if ((c->m_cr_track % 2) && c->m_adj_south == (*iter) ) {
+                    std::cout << ", SKIPPED SOUTH";
                     continue; 
                  } 
                  //on EVEN track, skip NORTH cell
                  else if (!(c->m_cr_track % 2) && c->m_adj_north == (*iter)) {
+                    std::cout << ", SKIPPED NORTH";
                     continue; 
                  }
               } else if(c->m_type == CellType::SWITCH_BOX) {
                  //on ODD track, adjust track for SOUTH and EAST cell
                  if ((c->m_cr_track % 2)) {
-                    if(c->m_adj_south == (*iter))
-                       current_track-=1; 
-                    else if (c->m_adj_east == (*iter))
-                       current_track-=1; 
+                    if(c->m_adj_south == (*iter)) {
+                       (*iter)->m_cr_track = c->m_cr_track - 1;
+                       switched_tr = true;
+                       std::cout << ", South-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
+                       //current_track-=1; 
+                    }
+                    else if (c->m_adj_east == (*iter)) {
+                       (*iter)->m_cr_track = c->m_cr_track - 1;
+                       switched_tr = true;
+                       std::cout << ", East-ward SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
+                       //current_track-=1; 
+                    }
                  } 
                  //on EVEN track, adjust track NORTH and WEST cell
                  else if (!(c->m_cr_track % 2) && c->m_adj_north == (*iter)) {
-                    if(c->m_adj_north == (*iter))
-                       current_track+=1; 
-                    else if (c->m_adj_west == (*iter))
-                       current_track+=1; 
+                    if(c->m_adj_north == (*iter)) {
+                       (*iter)->m_cr_track = c->m_cr_track + 1;
+                       switched_tr = true;
+                       std::cout << ", North-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
+                       //current_track+=1; 
+                    }
+                    else if (c->m_adj_west == (*iter)) {
+                       (*iter)->m_cr_track = c->m_cr_track + 1;
+                       switched_tr = true;
+                       std::cout << ", West-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
+                       //current_track+=1; 
+                    }
                  }
               }
            }
 
+           if (switched_tr)
+              tr = (*iter)->m_cr_track;
+           else
+              tr = c->m_cr_track;
+
+           if (!GridCell::s_uni_track && tr != current_track)
+              std::cerr << "\nERROR: CURRENT_TRACK =" << current_track <<"; DOES NOT MATCH tr track=" << tr;
+
            //either non-target LB, or no available pin to route with current_track
-           if ((*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c) == std::numeric_limits<int>::max()) {
+           if ((*iter)->getCellCost(tgt.x, tgt.y, tgt.p, tr, c) == std::numeric_limits<int>::max()) {
            //if (c->m_type != CellType::SWITCH_BOX)  current_track = c->m_cr_track;
-              std::cout << " NOT ADJACENT TO PIN: " << tgt.p << "\n";
+              std::cout << " , NOT ADJACENT TO PIN: " << tgt.p;
               continue;
            }
 
-           int tmp_dist = c->m_cr_path_cost + (*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c);
+           int tmp_dist = c->m_cr_path_cost + (*iter)->getCellCost(tgt.x, tgt.y, tgt.p, tr, c);
            if (tmp_dist < (*iter)->m_cr_path_cost) {
               (*iter)->m_cr_pred = c;
               (*iter)->m_cr_path_cost = tmp_dist;
-              (*iter)->m_cr_track = current_track;
+               
+              //(*iter)->m_cr_track = current_track;
+              if (!switched_tr) (*iter)->m_cr_track = c->m_cr_track;
               //   std::cout << " UPDATE pred=" << "(" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << "), path_cost=" << tmp_dist;
            }
-           std::cout << "\n";
            wavefront.push(*iter);
-        }
+        } //adjacent cells loop
+        std::cout << "\n";
      } //end wavefront  loop
 
      //Clean up grid for next Dikstra run
