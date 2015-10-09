@@ -6,10 +6,12 @@ std::vector<std::vector<GridCell>> g_fpga_grid;
 //Global list of nets
 std::vector<GridNet> g_fpga_nets;
 
+//Nets with longer linear distance between src tgt get routed first
 bool NetCompByDistance::operator() (GridNet *a, GridNet *b) {
    return a->getLineDistance() < b->getLineDistance();    
 } 
 
+//cell with the lowest total path cost get routed first
 bool CellCompByPathCost::operator() (GridCell *a, GridCell *b) {
    return (a->m_cr_path_cost) > (b->m_cr_path_cost);
 } 
@@ -115,15 +117,59 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
         }
 
         for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter) {
+
            std::cout << "-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ")";
            if ((*iter)->m_cr_reached) {
-              std::cout << " REACHED\n";
+              std::cout << " REACHED";
               continue;
            }
+
+           //Enforce UNITRACK rule
+           if (GridCell::s_uni_track) {
+              if(c->m_type == CellType::V_CHANNEL) {
+                 //on ODD track, skip EAST cell
+                 if ((c->m_cr_track % 2) && c->m_adj_east == (*iter) ) {
+                    continue; 
+                 } 
+                 //on EVEN track, skip WEST cell
+                 else if (!(c->m_cr_track % 2) && c->m_adj_west == (*iter)) {
+                    continue; 
+                 }
+              }
+              else if(c->m_type == CellType::H_CHANNEL) {
+                 //on ODD track, skip SOUTH cell
+                 if ((c->m_cr_track % 2) && c->m_adj_south == (*iter) ) {
+                    continue; 
+                 } 
+                 //on EVEN track, skip NORTH cell
+                 else if (!(c->m_cr_track % 2) && c->m_adj_north == (*iter)) {
+                    continue; 
+                 }
+              } else if(c->m_type == CellType::SWITCH_BOX) {
+                 //on ODD track, adjust track for SOUTH and EAST cell
+                 if ((c->m_cr_track % 2)) {
+                    if(c->m_adj_south == (*iter))
+                       current_track-=1; 
+                    else if (c->m_adj_east == (*iter))
+                       current_track-=1; 
+                 } 
+                 //on EVEN track, adjust track NORTH and WEST cell
+                 else if (!(c->m_cr_track % 2) && c->m_adj_north == (*iter)) {
+                    if(c->m_adj_north == (*iter))
+                       current_track+=1; 
+                    else if (c->m_adj_west == (*iter))
+                       current_track+=1; 
+                 }
+              }
+           }
+
+           //either non-target LB, or no available pin to route with current_track
            if ((*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c) == std::numeric_limits<int>::max()) {
+           //if (c->m_type != CellType::SWITCH_BOX)  current_track = c->m_cr_track;
               std::cout << " NOT ADJACENT TO PIN: " << tgt.p << "\n";
               continue;
            }
+
            int tmp_dist = c->m_cr_path_cost + (*iter)->getCellCost(tgt.x, tgt.y, tgt.p, current_track, c);
            if (tmp_dist < (*iter)->m_cr_path_cost) {
               (*iter)->m_cr_pred = c;
@@ -145,7 +191,6 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
         }
      }
      //wavefront= priority_queue <GridCell*, vector<GridCell*>, CellCompByPathCost> (); //reset heap
-
      int cnt=1;
      if(!success && first_trial) {
        std::cout << "NET_ID= "<< net->m_net_id << ";First run with track=" << current_track << " didn't work, so we are backtracking with other tracks.\n";
@@ -211,6 +256,7 @@ int main(int argc, char *argv[]) {
 
    //Nets to route
    priority_queue<GridNet*, vector<GridNet*>, NetCompByDistance> net_heap;
+   list<GridNet*> failed_nets;
 
    //parse standard input
    string line;
@@ -290,6 +336,7 @@ int main(int argc, char *argv[]) {
         cout << "ROUTING: couldn't expand to the destination cell during maze routing phase\n";
         cout << "NetID: " << net->m_net_id << "\n";
         ++fail_cnt;
+        failed_nets.push_back(net);
         continue;
      }
    }//end net_heap loop
@@ -298,9 +345,17 @@ int main(int argc, char *argv[]) {
 
    cout << "\n//-----------------------------------------------------------//\n";
    cout << "// Summary\n";
+   cout << "// Channel Width = " << GridCell::s_ch_width << "\n";
+   cout << "// ";
+   if (GridCell::s_uni_track) cout << "Uni-directional Tracks\n";
+   else                       cout << "Bi-directional Tracks\n";
+   cout << "// Number of nets to route = " << g_fpga_nets.size() << "\n";
    cout << "//-----------------------------------------------------------//\n";
    cout << "Number of nets that failed to route: " << fail_cnt << "\n\n";
 
+   for(auto i = failed_nets.begin(); i != failed_nets.end(); ++i) {
+     printNetInfo ((*i)->m_net_id, true);
+   }
    return EXIT_SUCCESS;
 }
 

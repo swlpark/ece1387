@@ -168,7 +168,8 @@ bool GridNet::routeGraph(int src_x, int src_y) {
          } else if ((*it)-> m_type == CellType::SWITCH_BOX) {
             lh_cell =  *(std::next(it, 1));
             i_pin = matchAdjacentPin(parent_pin , parent, (*it));
-            o_pin = (*it)->getOutputPin(i_pin, m_tgt_p, lh_cell);
+//            o_pin = (*it)->getOutputPin(i_pin, m_tgt_p, lh_cell);
+            o_pin = (*it)->getOutputPin((*it)->m_cr_track, m_tgt_p, lh_cell);
             if ((*it)->burnPin(i_pin) < 0)
               failed = true;
             if ((*it)->burnPin(o_pin) < 0)
@@ -213,11 +214,15 @@ void GridNet::printGraph() {
       << " tgt("  << m_tgt_x << ", " << m_tgt_y << ", " << m_tgt_p << "); \n";
      for(auto it = m_graph.begin(); it != m_graph.end(); ++it) {
         std::cout << "Level-" << cnt << " : " << tostring_cell_type(*it) << "(" << (*it)->m_x_pos << ", " \
-        << (*it)->m_y_pos << "), pin_cnt=" << (*it)->m_pin_list.size() << ", o_pin=" << o_pins[cnt] \
-        << " TRACK_NUM=" << (*it)->m_cr_track << "\n";
+        << (*it)->m_y_pos << "), pin_cnt=" << (*it)->m_pin_list.size()  << " TRACK_NUM=" << (*it)->m_cr_track;
+
+        if (o_pins.size() == m_graph.size())
+           std::cout << ", o_pin=" << o_pins[cnt];
+         
+        std::cout << "\n";
         cnt++;
      }
    } else {
-     std::cout << "GridNet: printGraph() called with zero graph\n";
+      std::cout << "GridNet: printGraph() called with zero graph\n";
    }
 }

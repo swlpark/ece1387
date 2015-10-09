@@ -137,31 +137,32 @@ std::string tostring_cell_type (GridCell * cell) {
     return desc;
 }
 
-/*TODO: implement uni-directional support
- * Return matching pin number on the target Cell
+/*
+ * Return matching input pin number on a switch box(TGT), given SRC track's 
+ * track number;
  */
-int matchAdjacentPin (int src_o_pin, GridCell * source , GridCell * target) {
-    int track_idx = src_o_pin % GridCell::s_ch_width;
+int matchAdjacentPin (int track_idx, GridCell * source , GridCell * target) {
+    int pin_idx = track_idx % GridCell::s_ch_width;
 
     if (source->m_adj_south == target) {
       //TARGET_SIDE IS NORTH
-      if (target->m_adj_south != nullptr) track_idx += GridCell::s_ch_width;
-      if (target->m_adj_east != nullptr)  track_idx += GridCell::s_ch_width;
+      if (target->m_adj_south != nullptr) pin_idx += GridCell::s_ch_width;
+      if (target->m_adj_east != nullptr)  pin_idx += GridCell::s_ch_width;
     } else if (source->m_adj_east == target) {
       //TARGET_SIDE IS WEST
-      if (target->m_adj_south != nullptr) track_idx += GridCell::s_ch_width;
-      if (target->m_adj_east != nullptr)  track_idx += GridCell::s_ch_width;
-      if (target->m_adj_north != nullptr) track_idx += GridCell::s_ch_width;
+      if (target->m_adj_south != nullptr) pin_idx += GridCell::s_ch_width;
+      if (target->m_adj_east != nullptr)  pin_idx += GridCell::s_ch_width;
+      if (target->m_adj_north != nullptr) pin_idx += GridCell::s_ch_width;
     } else if (source->m_adj_north == target) {
       //TARGET_SIDE IS SOUTH
     } else if (source->m_adj_west == target) {
       //TARGET_SIDE IS EAST
-      if (target->m_adj_south != nullptr) track_idx += GridCell::s_ch_width;
+      if (target->m_adj_south != nullptr) pin_idx += GridCell::s_ch_width;
     } else {
       std::cerr << "matchAdjacentPin : could not find a matching cell... \n";
       return EXPAND_FAIL;
     }
-    return track_idx;
+    return pin_idx;
 }
 
 const float c_cell_width = 15;
@@ -171,7 +172,7 @@ void begin_graphics (void) {
    float   screen_dim         = c_cell_width * g_fpga_grid.at(0).size();
    t_bound_box initial_coords = t_bound_box(0,0,screen_dim,screen_dim); 
 
-   init_graphics("FPGA Routing Grid", WHITE); // you could pass a t_color RGB triplet instead
+   init_graphics("FPGA Routing Grid", WHITE);
    set_visible_world(initial_coords);
 
    std::ostringstream str_buf;
@@ -180,8 +181,7 @@ void begin_graphics (void) {
    update_message(disp_str);
 
    event_loop(NULL, NULL, NULL, drawscreen);   
-   t_bound_box old_coords = get_visible_world(); // save the current view for later;
-
+   //t_bound_box old_coords = get_visible_world();
 }
 
 void drawscreen (void) {
@@ -195,7 +195,6 @@ void drawscreen (void) {
       DARKGREY,
       WHITE,
       BLACK,
-
       BLUE,
       GREEN,
       YELLOW,
@@ -485,13 +484,13 @@ void drawscreen (void) {
              parent = (*i);
          }
 
-         //TODO: update color index with RGB indices
+         //Rotate color index array, skipping white for visibility
          color_idx++;
          if(color_idx == 10) {
             color_idx = 0;
-         } else if (color_idx == 3) {
+         } else if (color_idx == 2) {
            //skip white 
-           color_idx = 4;
+           color_idx = 3;
          }
       }//if routed
    } //end of net loop

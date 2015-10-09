@@ -114,7 +114,6 @@ void GridCell::removeNet(GridNet* _net) {
    m_net_list.remove(_net);
 }
 
-//TODO: optimization opportunity in what to push to vector
 std::vector<GridCell*> GridCell::getAdjCells(int src_lb_pin) {
    std::vector<GridCell*> ptr_vec;
    if (m_type == CellType::LOGIC_BLOCK) {
@@ -338,13 +337,13 @@ int GridCell::__calcCellCost(bool is_sbox) {
       if (m_net_list.size() == (m_adj_cnt * s_ch_width / 2)) {
          return std::numeric_limits<int>::max();
       } else {
-         return 0.5*m_net_list.size();
+         return m_net_list.size();
       }
    } else {
       if (m_net_list.size() == s_ch_width) {
          return std::numeric_limits<int>::max();
       } else {
-         return 0.5*m_net_list.size();
+         return m_net_list.size();
       }
    }
 }
