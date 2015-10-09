@@ -331,6 +331,28 @@ int GridCell::getOutputPin (int src_pin, int lb_tgt_pin, const GridCell * tgt_ce
    //m_pin_list[tgt_pin].net_ref_cnt++;
    return tgt_pin;
 }
+//Resets pin and netlists attached to this cell
+void GridCell::resetCell (void) {
+    int pin_cnt;
+    if (m_type == CellType::LOGIC_BLOCK) {
+       pin_cnt = 4; 
+    } else if (m_type == CellType::V_CHANNEL || m_type == CellType::H_CHANNEL){
+       pin_cnt = GridCell::s_ch_width * m_adj_cnt;
+    } else if (m_type == CellType::SWITCH_BOX) {
+       pin_cnt = GridCell::s_ch_width * m_adj_cnt;
+    }
+    m_pin_list.resize(pin_cnt);
+    for (int i = 0; i < pin_cnt; ++i ) {
+       CellPin a_pin;
+       a_pin.routed = false;
+       a_pin.net_ref_cnt = 0;
+       m_pin_list[i] = a_pin;
+    }
+
+    if(m_type == CellType::SWITCH_BOX)
+       std::cout << "DEBUG after resetCell, m_pin_list.size()= " << m_pin_list.size() << "\n";
+    m_net_list.clear();
+}
 
 int GridCell::__calcCellCost(bool is_sbox) {
    if (is_sbox) {
@@ -338,13 +360,13 @@ int GridCell::__calcCellCost(bool is_sbox) {
       if (m_net_list.size() == (m_adj_cnt * s_ch_width / 2)) {
          return std::numeric_limits<int>::max();
       } else {
-         return m_net_list.size() / 2;
+         return m_net_list.size();
       }
    } else {
       if (m_net_list.size() == s_ch_width) {
          return std::numeric_limits<int>::max();
       } else {
-         return m_net_list.size() / 2;
+         return m_net_list.size();
       }
    }
 }

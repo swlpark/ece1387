@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <iterator>
+#include <algorithm>
 #include <vector>
 #include <cmath>
 #include <ctime>
@@ -56,6 +57,7 @@ class GridNet {
    Coordinate getTgtCoordinate();
    void       insertNode(GridCell * node);
    bool       routeGraph(int, int);
+   void       resetNet();
    void       printGraph();
 };
 

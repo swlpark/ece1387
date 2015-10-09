@@ -75,6 +75,8 @@ class GridCell {
       int           getTrackBundle  (int, const GridCell *, std::vector<int> &); //called when S->C
       int           getOutputPin    (int, int, const GridCell *); //"expand given an input pin, and target cell" 
       int           routeDrNet   (int, int) ;           //trigger update to attached nets
+
+      void          resetCell     (void) ;              //Resets pin and netlists attached to this cell
 };
 
 #endif
