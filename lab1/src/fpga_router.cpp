@@ -383,8 +383,6 @@ int main(int argc, char *argv[]) {
       net_heap.push(&(*l_it));
    }
 
-  int last_working_ch_width = 0;
-  int last_working_tracks_used = 0;
 
   int fail_cnt = 0;
   int tracks_used = 0;
@@ -411,18 +409,15 @@ int main(int argc, char *argv[]) {
      }
    }//end net_heap loop
 
-   //Store results from the first run
-   //list<GridNet> last_working_nets;
-   //last_working_ch_width = GridCell::s_ch_width; 
-   //last_working_tracks_used = tracks_used;
-   //std::copy(g_fpga_nets.begin(), g_fpga_nets.end(), last_working_nets.begin());
-
-//   begin_graphics();
+   //Note: Router displays graphics of version with channel width matching the test file specification
+   //Note: With -s option, It reports the minimum W that it was able to achieve, and number of tracks used
    begin_graphics();
 
+   bool success;
+   int last_working_ch_width = 0;
+   int last_working_tracks_used = tracks_used;
+
    if (u_skip_min_check) {
-      GridCell::s_ch_width -= 2;
-   
       //Reset FPGA nets
       for (auto it = g_fpga_nets.begin(); it != g_fpga_nets.end(); ++it) {
         it->resetNet();
@@ -433,11 +428,9 @@ int main(int argc, char *argv[]) {
            c_it->resetCell();
          }
       }
-   
-   
       int opt_run = 1;
-      bool success;
       do {
+          GridCell::s_ch_width -= 2;
           //add nets to heap to be used for coarse-routing
           for(auto l_it = g_fpga_nets.begin(); l_it != g_fpga_nets.end(); ++l_it) {
              net_heap.push(&(*l_it));
@@ -473,11 +466,9 @@ int main(int argc, char *argv[]) {
           }//end net_heap loop
    
           //store results from this run
-          //last_working_ch_width = GridCell::s_ch_width; 
-          //last_working_tracks_used = tracks_used;
+          last_working_ch_width = GridCell::s_ch_width; 
+          last_working_tracks_used = (tracks_used != 0) ? tracks_used : last_working_tracks_used;
           //std::copy(g_fpga_nets.begin(), g_fpga_nets.end(), last_working_nets.begin());
-   
-          GridCell::s_ch_width -= 2;
    
           //Cleanup FPGA nets
           for (auto it = g_fpga_nets.begin(); it != g_fpga_nets.end(); ++it) {
@@ -490,6 +481,19 @@ int main(int argc, char *argv[]) {
              }
           }
       } while(success);
+
+   }
+   if (u_skip_min_check) {
+      //Cleanup FPGA nets
+      for (auto it = g_fpga_nets.begin(); it != g_fpga_nets.end(); ++it) {
+        it->resetNet();
+      }
+      //Cleanup FPGA grid
+      for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
+         for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
+           c_it->resetCell();
+         }
+      }
       //Re-do the final run, to bring up
       GridCell::s_ch_width += 2;
 
@@ -497,7 +501,7 @@ int main(int argc, char *argv[]) {
          net_heap.push(&(*l_it));
       }
       tracks_used = 0;
-   
+ 
       while(!net_heap.empty()) {
         GridNet* net = net_heap.top();
         net_heap.pop();
@@ -522,6 +526,8 @@ int main(int argc, char *argv[]) {
       }//end net_heap loop
    }
 
+   last_working_tracks_used = (tracks_used != 0) ? tracks_used : last_working_tracks_used;
+
    cout << "\n//-----------------------------------------------------------//\n";
    cout << "// Summary\n";
    cout << "// Channel Width = " << GridCell::s_ch_width << "\n";
@@ -530,11 +536,12 @@ int main(int argc, char *argv[]) {
    else                       cout << "Bi-directional Tracks\n";
    cout << "// Number of nets to route = " << g_fpga_nets.size() << "\n";
    cout << "//-----------------------------------------------------------//\n";
-   cout << "Number of tracks used: " << tracks_used << "\n";
+   cout << "Number of tracks used: " << last_working_tracks_used << "\n";
 
    cout << "Number of nets that failed to route: " << fail_cnt << "\n\n";
    for(auto i = failed_nets.begin(); i != failed_nets.end(); ++i) {
       printNetInfo ((*i)->m_net_id, true);
    }
    return EXIT_SUCCESS;
+
 }

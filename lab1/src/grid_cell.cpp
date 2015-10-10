@@ -349,8 +349,6 @@ void GridCell::resetCell (void) {
        m_pin_list[i] = a_pin;
     }
 
-    if(m_type == CellType::SWITCH_BOX)
-       std::cout << "DEBUG after resetCell, m_pin_list.size()= " << m_pin_list.size() << "\n";
     m_net_list.clear();
 }
 
