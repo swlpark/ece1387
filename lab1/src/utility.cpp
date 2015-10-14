@@ -165,7 +165,7 @@ int matchAdjacentPin (int track_idx, GridCell * source , GridCell * target) {
     return pin_idx;
 }
 
-const float c_cell_width = 15;
+const float c_cell_width = 75;
 
 void begin_graphics (void) {
    int  grid_dim = g_fpga_grid[0].size();
@@ -176,7 +176,12 @@ void begin_graphics (void) {
    set_visible_world(initial_coords);
 
    std::ostringstream str_buf;
-   str_buf << grid_dim << " x " << grid_dim << " Grid";
+   str_buf << (grid_dim-1)/2  << "x" << (grid_dim-1)/2 << " FPGA Grid; CHANNEL WIDTH=" << GridCell::s_ch_width;
+   if(GridCell::s_uni_track) 
+     str_buf << "; Uni-directional tracks";
+   else
+     str_buf << "; Bi-directional tracks";
+   
    std::string disp_str = str_buf.str();
    update_message(disp_str);
 

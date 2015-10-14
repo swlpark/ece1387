@@ -206,6 +206,13 @@ bool GridNet::routeGraph(int src_x, int src_y) {
   return m_routed;
 }
 
+void GridNet::resetNet() {
+   m_graph.clear();
+   for(auto i=o_pins.begin(); i!=o_pins.end(); ++i) {
+     *i = 0;
+   }
+}
+
 void GridNet::printGraph() {
    if (m_graph.size() > 0) {
      int cnt = 0;

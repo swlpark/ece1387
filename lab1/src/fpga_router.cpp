@@ -56,41 +56,6 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
            while(c != nullptr) { //back track
               c->addNet(net);     //for congestion cost calculation
               net->insertNode(c); //constructing a linked list of path
-
-              //TODO:Update CHANNEL's track, matching predecessors value (UNI-directional tracks only)
-              if(GridCell:s_uni_track && c->m_cr_pred == CellType::SWITCH_BOX) {
-                 //on ODD track, adjust track for SOUTH and EAST cell
-                 if ((c->m_cr_pred->m_cr_track % 2)) {
-                    if(c->m_adj_south == (*iter)) {
-                       (*iter)->m_cr_track = c->m_cr_track - 1;
-                       switched_tr = true;
-                       std::cout << ", South-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
-                       //current_track-=1; 
-                    }
-                    else if (c->m_adj_east == (*iter)) {
-                       (*iter)->m_cr_track = c->m_cr_track - 1;
-                       switched_tr = true;
-                       std::cout << ", East-ward SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
-                       //current_track-=1; 
-                    }
-                 } 
-                 //on EVEN track, adjust track NORTH and WEST cell
-                 else if (!(c->m_cr_track % 2) && c->m_adj_north == (*iter)) {
-                    if(c->m_adj_north == (*iter)) {
-                       (*iter)->m_cr_track = c->m_cr_track + 1;
-                       switched_tr = true;
-                       std::cout << ", North-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
-                       //current_track+=1; 
-                    }
-                    else if (c->m_adj_west == (*iter)) {
-                       (*iter)->m_cr_track = c->m_cr_track + 1;
-                       switched_tr = true;
-                       std::cout << ", West-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
-                       //current_track+=1; 
-                    }
-                 }
-              }
-
               c = c->m_cr_pred;
            } 
            //validate & expand
@@ -100,8 +65,8 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
 
         //Iterate over c's adjacent neighbors
         std::vector<GridCell*> adj_cells = c->getAdjCells(src.p);
-        std::cout << "\nDEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << "), m_cr_track=" << c->m_cr_track <<", m_cr_path_cost=" << c->m_cr_path_cost << "\n";
-        std::cout << "DEBUG : adj_cells.size() = " << adj_cells.size();
+        //std::cout << "\nDEBUG : expanding C cell (" << tostring_cell_type(c) <<  ") at (" << c->m_x_pos << ", " << c->m_y_pos << "), m_cr_track=" << c->m_cr_track <<", m_cr_path_cost=" << c->m_cr_path_cost << "\n";
+        //std::cout << "DEBUG : adj_cells.size() = " << adj_cells.size();
 
         //FIRST channel case: starting cell must choose a track
         if (c->m_cr_path_cost == 0 && c->m_type == CellType::LOGIC_BLOCK && first_trial) {
@@ -172,11 +137,11 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
         for(auto iter=adj_cells.begin(); iter!=adj_cells.end(); ++iter) {
            bool switched_tr = false;
            int tr = 0;
-           std::cout << "\n-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ") m_cr_track=" << (*iter)->m_cr_track  << ", cr_path_cost=";
-           if ((*iter)->m_cr_path_cost == std::numeric_limits<int>::max()) std::cout << "INF";
-           else std::cout << (*iter)->m_cr_path_cost;
+           //std::cout << "\n-> child: (" << tostring_cell_type((*iter)) <<  ") at (" << (*iter)->m_x_pos << ", " << (*iter)->m_y_pos << ") m_cr_track=" << (*iter)->m_cr_track  << ", cr_path_cost=";
+           //if ((*iter)->m_cr_path_cost == std::numeric_limits<int>::max()) std::cout << "INF";
+           //else std::cout << (*iter)->m_cr_path_cost;
            if ((*iter)->m_cr_reached) {
-              std::cout << ", REACHED";
+              //std::cout << ", REACHED";
               continue;
            }
 
@@ -185,24 +150,24 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
               if(c->m_type == CellType::V_CHANNEL) {
                  //on ODD track, skip EAST cell
                  if ((c->m_cr_track % 2) && c->m_adj_east == (*iter) ) {
-                    std::cout << ", SKIPPED EAST";
+                    //std::cout << ", SKIPPED EAST";
                     continue; 
                  } 
                  //on EVEN track, skip WEST cell
                  else if (!(c->m_cr_track % 2) && c->m_adj_west == (*iter)) {
-                    std::cout << ", SKIPPED WEST";
+                    //std::cout << ", SKIPPED WEST";
                     continue; 
                  }
               }
               else if(c->m_type == CellType::H_CHANNEL) {
                  //on ODD track, skip SOUTH cell
                  if ((c->m_cr_track % 2) && c->m_adj_south == (*iter) ) {
-                    std::cout << ", SKIPPED SOUTH";
+                    //std::cout << ", SKIPPED SOUTH";
                     continue; 
                  } 
                  //on EVEN track, skip NORTH cell
                  else if (!(c->m_cr_track % 2) && c->m_adj_north == (*iter)) {
-                    std::cout << ", SKIPPED NORTH";
+                    //std::cout << ", SKIPPED NORTH";
                     continue; 
                  }
               } else if(c->m_type == CellType::SWITCH_BOX) {
@@ -211,28 +176,28 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
                     if(c->m_adj_south == (*iter)) {
                        (*iter)->m_cr_track = c->m_cr_track - 1;
                        switched_tr = true;
-                       std::cout << ", South-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
+                       //std::cout << ", South-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
                        //current_track-=1; 
                     }
                     else if (c->m_adj_east == (*iter)) {
                        (*iter)->m_cr_track = c->m_cr_track - 1;
                        switched_tr = true;
-                       std::cout << ", East-ward SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
+                       //std::cout << ", East-ward SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
                        //current_track-=1; 
                     }
                  } 
                  //on EVEN track, adjust track NORTH and WEST cell
-                 else if (!(c->m_cr_track % 2) && c->m_adj_north == (*iter)) {
+                 else if (!(c->m_cr_track % 2)) {
                     if(c->m_adj_north == (*iter)) {
                        (*iter)->m_cr_track = c->m_cr_track + 1;
                        switched_tr = true;
-                       std::cout << ", North-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
+                       //std::cout << ", North-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
                        //current_track+=1; 
                     }
                     else if (c->m_adj_west == (*iter)) {
                        (*iter)->m_cr_track = c->m_cr_track + 1;
                        switched_tr = true;
-                       std::cout << ", West-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
+                       //std::cout << ", West-ward: SWITCHED TRACK TO " << (*iter)->m_cr_track << " FROM " << c->m_cr_track;
                        //current_track+=1; 
                     }
                  }
@@ -250,8 +215,11 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
            //either non-target LB, or no available pin to route with current_track
            if ((*iter)->getCellCost(tgt.x, tgt.y, tgt.p, tr, c) == std::numeric_limits<int>::max()) {
               ////CHECK_BOX
-              //if (c->m_type != CellType::SWITCH_BOX)  current_track = c->m_cr_track;
-              std::cout << " , NOT ADJACENT TO PIN: " << tgt.p;
+              if (switched_tr) {
+                 (*iter)->m_cr_track = c->m_cr_track;
+                 current_track =  c->m_cr_track;
+              }
+              //std::cout << " , NOT ADJACENT TO PIN: " << tgt.p;
               continue;
            }
 
@@ -266,7 +234,7 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
            }
            wavefront.push(*iter);
         } //adjacent cells loop
-        std::cout << "\n";
+        //std::cout << "\n";
      } //end wavefront  loop
 
      //Clean up grid for next Dikstra run
@@ -283,7 +251,7 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
      int cnt=1;
      if(!success && first_trial) {
        std::cout << "NET_ID= "<< net->m_net_id << ";First run with track=" << current_track << " didn't work, so we are backtracking with other tracks.\n";
-       std::cout << "DEBUG: tracks.size()=" << tracks.size() << "\n";
+       //std::cout << "DEBUG: tracks.size()=" << tracks.size() << "\n";
        for(int t=0; t < trials.size(); t++) {
           if (trials.at(t) == 1) continue;
 
@@ -299,11 +267,9 @@ bool dikstraMazeRoute (Coordinate src, Coordinate tgt, bool first_trial, int bt_
           }
        }
      }
-
     //if successful, increment track reference count
     if (success)
       GridCell::s_track_ref[current_track] += 1;
-
      return success;
 }
 
@@ -314,6 +280,7 @@ int main(int argc, char *argv[]) {
    //2) channel width -W 
    //3) gui
    bool u_uni_directional = false;
+   bool u_skip_min_check  = false;
    int  u_width           = 8;
 
    string f_name;
@@ -321,8 +288,11 @@ int main(int argc, char *argv[]) {
 
    char c;
    cout << "Starting the FPGA router... \n" ;
-   while ((c = getopt (argc, argv, "ui:W:")) != -1) {
+   while ((c = getopt (argc, argv, "sui:W:")) != -1) {
       switch (c) {
+         case 's':
+            u_skip_min_check = true;
+            break;
          case 'u':
             u_uni_directional = true;
             break;
@@ -413,9 +383,9 @@ int main(int argc, char *argv[]) {
       net_heap.push(&(*l_it));
    }
 
-   int fail_cnt = 0;
-   int tracks_used = 0;
-   //NOTE: net is solid object here..
+
+  int fail_cnt = 0;
+  int tracks_used = 0;
    while(!net_heap.empty()) {
      GridNet* net = net_heap.top();
      net_heap.pop();
@@ -424,7 +394,6 @@ int main(int argc, char *argv[]) {
 
      //Start of Dikstra's algorithm for coarse routing
      cout << "\n//-----------------------------------------------------------//\n";
-     cout << "//Start routing";
      printNetInfo(net->m_net_id, true);
      cout << "//-----------------------------------------------------------//\n";
  
@@ -440,7 +409,124 @@ int main(int argc, char *argv[]) {
      }
    }//end net_heap loop
 
+   //Note: Router displays graphics of version with channel width matching the test file specification
+   //Note: With -s option, It reports the minimum W that it was able to achieve, and number of tracks used
    begin_graphics();
+
+   bool success;
+   int last_working_ch_width = 0;
+   int last_working_tracks_used = tracks_used;
+
+   if (u_skip_min_check) {
+      //Reset FPGA nets
+      for (auto it = g_fpga_nets.begin(); it != g_fpga_nets.end(); ++it) {
+        it->resetNet();
+      }
+      //Reest FPGA grid
+      for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
+         for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
+           c_it->resetCell();
+         }
+      }
+      int opt_run = 1;
+      do {
+          GridCell::s_ch_width -= 2;
+          //add nets to heap to be used for coarse-routing
+          for(auto l_it = g_fpga_nets.begin(); l_it != g_fpga_nets.end(); ++l_it) {
+             net_heap.push(&(*l_it));
+          }
+          tracks_used = 0;
+   
+          cout << "\n//-----------------------------------------------------------//\n";
+          cout << "//Staring optimization run; opt_run=" << opt_run << "; ch_width =" << GridCell::s_ch_width;
+          cout << "//\n-----------------------------------------------------------//\n";
+
+          while(!net_heap.empty()) {
+            GridNet* net = net_heap.top();
+            net_heap.pop();
+            Coordinate src = net->getSrcCoordinate();
+            Coordinate tgt = net->getTgtCoordinate();
+   
+            //Start of Dikstra's algorithm for coarse routing
+            cout << "\n//-----------------------------------------------------------//\n";
+            cout << "//Routing net, ";
+            printNetInfo(net->m_net_id, true);
+            cout << "//-----------------------------------------------------------//\n";
+    
+            success = dikstraMazeRoute(src, tgt, true, 0, net);
+            if (!success) {
+               cout << "ROUTING: couldn't expand to the destination cell during maze routing phase\n";
+               cout << "NetID: " << net->m_net_id << "\n";
+               break;
+               continue;
+            } else { //Successfully routed the net
+              //Tracks Used = Total Path Levels - 2 (i.e. LB pins are not tracks)
+              tracks_used += net->m_graph.size() - 2;
+            }
+          }//end net_heap loop
+   
+          //store results from this run
+          last_working_ch_width = GridCell::s_ch_width; 
+          last_working_tracks_used = (tracks_used != 0) ? tracks_used : last_working_tracks_used;
+          //std::copy(g_fpga_nets.begin(), g_fpga_nets.end(), last_working_nets.begin());
+   
+          //Cleanup FPGA nets
+          for (auto it = g_fpga_nets.begin(); it != g_fpga_nets.end(); ++it) {
+            it->resetNet();
+          }
+          //Cleanup FPGA grid
+          for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
+             for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
+               c_it->resetCell();
+             }
+          }
+      } while(success);
+
+   }
+   if (u_skip_min_check) {
+      //Cleanup FPGA nets
+      for (auto it = g_fpga_nets.begin(); it != g_fpga_nets.end(); ++it) {
+        it->resetNet();
+      }
+      //Cleanup FPGA grid
+      for (auto r_it = g_fpga_grid.begin(); r_it != g_fpga_grid.end(); ++r_it) {
+         for (auto c_it = r_it->begin(); c_it != r_it->end(); ++c_it) {
+           c_it->resetCell();
+         }
+      }
+      //Re-do the final run, to bring up
+      GridCell::s_ch_width += 2;
+
+      for(auto l_it = g_fpga_nets.begin(); l_it != g_fpga_nets.end(); ++l_it) {
+         net_heap.push(&(*l_it));
+      }
+      tracks_used = 0;
+ 
+      while(!net_heap.empty()) {
+        GridNet* net = net_heap.top();
+        net_heap.pop();
+        Coordinate src = net->getSrcCoordinate();
+        Coordinate tgt = net->getTgtCoordinate();
+        //Start of Dikstra's algorithm for coarse routing
+        cout << "\n//-----------------------------------------------------------//\n";
+        cout << "//Final Re-Run with ch_width= " << GridCell::s_ch_width;
+        printNetInfo(net->m_net_id, true);
+        cout << "//-----------------------------------------------------------//\n";
+    
+        success = dikstraMazeRoute(src, tgt, true, 0, net);
+        if (!success) {
+           cout << "ROUTING: couldn't expand to the destination cell during maze routing phase\n";
+           cout << "NetID: " << net->m_net_id << "\n";
+           break;
+           continue;
+        } else { //Successfully routed the net
+          //Tracks Used = Total Path Levels - 2 (i.e. LB pins are not tracks)
+          tracks_used += net->m_graph.size() - 2;
+        }
+      }//end net_heap loop
+   }
+
+   last_working_tracks_used = (tracks_used != 0) ? tracks_used : last_working_tracks_used;
 
    cout << "\n//-----------------------------------------------------------//\n";
    cout << "// Summary\n";
@@ -450,12 +536,12 @@ int main(int argc, char *argv[]) {
    else                       cout << "Bi-directional Tracks\n";
    cout << "// Number of nets to route = " << g_fpga_nets.size() << "\n";
    cout << "//-----------------------------------------------------------//\n";
-   cout << "Number of tracks used: " << tracks_used << "\n";
-   cout << "Number of nets that failed to route: " << fail_cnt << "\n\n";
+   cout << "Number of tracks used: " << last_working_tracks_used << "\n";
 
+   cout << "Number of nets that failed to route: " << fail_cnt << "\n\n";
    for(auto i = failed_nets.begin(); i != failed_nets.end(); ++i) {
-     printNetInfo ((*i)->m_net_id, true);
+      printNetInfo ((*i)->m_net_id, true);
    }
    return EXIT_SUCCESS;
-}
 
+}
