@@ -4,27 +4,31 @@
 #include <list>
 #include <iterator>
 #include <iostream>
+#include <algorithm>
 #include <cassert>
 
 struct Edge;
 
 struct Vertex
 {
-  int v; 
+  int v_id; 
   int x_pos; 
   int y_pos; 
   bool fixed; 
   std::list<Edge> adj_list;
 
   Vertex();
-  void addEdge(Vertex *, float);
+  void addEdge(int, Vertex *, float);
   void printVertex();
 };
 
 struct Edge
 {
+  int e_id;
   Vertex * tgt;
-  float weight;
+  double weight;
+
+  bool operator==(const Edge &rhs);
 };
 
 #endif

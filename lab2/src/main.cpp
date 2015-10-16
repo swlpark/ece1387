@@ -14,9 +14,8 @@
 #include "graph.h"
 
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
-  return lhs.v < rhs.v;
+  return lhs.v_id < rhs.v_id;
 }
-
 
 int main(int argc, char *argv[]) {
    using namespace std;
@@ -42,6 +41,7 @@ int main(int argc, char *argv[]) {
 
    vector<Vertex>        cells; 
    vector<vector<int>>   edges; 
+   vector<double> edge_weights;
 
    //parse input file as a stream
    string line;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
             if (line_data.size() > 1)
             {
               Vertex c; 
-              c.v = line_data.at(0);
+              c.v_id = line_data.at(0);
               cells.push_back(c);
      
               for(unsigned int i=1; i<line_data.size(); ++i)
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
                    edges.push_back(vector<int>());
                 }
 
-                edges[e-1].push_back(c.v);
+                edges[e-1].push_back(c.v_id);
               }
             } else { //-1 line
               mark_io = true;
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
                sorted = true;
             }
             int cell_idx = line_data.at(0) - 1;
-            assert(cell_idx+1 == cells[cell_idx].v);
+            assert(cell_idx+1 == cells[cell_idx].v_id);
 
             cells[cell_idx].fixed = true;
             cells[cell_idx].x_pos = line_data.at(1);
@@ -116,9 +116,27 @@ int main(int argc, char *argv[]) {
    in_file.close();
    cout << "Okay: finished parsing the placer input file : " << f_name << "\n"; 
 
+   //set clique model edge weights
+   edge_weights.resize(edges.size());
    for(unsigned int i = 0; i < edges.size(); ++i) 
    {
+     int edge_id = i + 1;
      vector<int> & adj_cells = edges.at(i);
      assert(adj_cells.size() >= 2);
+
+     double clique_weight = 2.0 / adj_cells.size();
+     edge_weights[i] = clique_weight;
+
+     for (unsigned int j=0; j < adj_cells.size(); ++j)
+     {
+       int cell_idx = adj_cells.at(j) - 1;
+       for (unsigned int k=0; k < adj_cells.size(); ++k)
+         cells[cell_idx].addEdge(edge_id, &cells[adj_cells[k]-1], clique_weight);
+     }
+   }
+
+   for(auto it = cells.begin(); it != cells.end(); ++it) 
+   {
+     (*it).printVertex();
    }
 }
