@@ -46,5 +46,3 @@ bool Edge::operator==(const Edge &rhs)
    else 
       return false;
 }
-
-

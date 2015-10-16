@@ -12,6 +12,11 @@
 #include <cassert>
 #include <ctime>
 #include "graph.h"
+#include "placer.h"
+
+std::vector<Vertex>        cells; 
+std::vector<vector<int>>   edges; 
+std::vector<double> edge_weights;
 
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
   return lhs.v_id < rhs.v_id;
@@ -38,10 +43,6 @@ int main(int argc, char *argv[]) {
       cerr << "Cannot open file - " << f_name << "; please check file exists\n";
       exit(EXIT_FAILURE);
    }
-
-   vector<Vertex>        cells; 
-   vector<vector<int>>   edges; 
-   vector<double> edge_weights;
 
    //parse input file as a stream
    string line;
@@ -139,4 +140,25 @@ int main(int argc, char *argv[]) {
    {
      (*it).printVertex();
    }
+
+   //Q: 2D matrix to solve linear system of quadratic distance
+   //vector of columns
+   vector<vector<double>> Q;
+   Q.resize(cells.size());
+   for(int c=0; c < cells.size(); ++c)
+   {
+      Vector& adj_cells = cells.at(c);
+      Q[c].resize(cells.size(), 0.0);
+
+      //iterating over the edge list
+      for(auto it = adj_cells.begin(); it != adj_cells.end(); ++it)
+      {
+         int r_idx; //which row in a given column to update?
+         
+
+      }
+      
+   }
+
+
 }

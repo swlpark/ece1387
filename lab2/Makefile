@@ -1,7 +1,8 @@
 CC = g++
-CFLAGS = -g -O0 -c -Wall -std=c++11
+CFLAGS = -g -O0 -c -Wall -std=c++11 -Iref/SuiteSparse/AMD/Include -Iref/SuiteSparse/UMFPACK/Include
 LDFLAGS = -g -Wall 
 EXE = ap
+UMFPACK_LIBS = ref/SuiteSparse/UMFPACK/Lib/libumfpack.a ref/SuiteSparse/AMD/Lib/libamd.a
 
 #HDR = src/graphics.h src/easygl_constants.h
 
@@ -14,10 +15,15 @@ CFLAGS += $(shell pkg-config --cflags freetype2) # evaluates to the correct incl
 
 default: all
 
-all: bin $(OBJ_FILES) $(EXE)
+all: bin umfpack $(OBJ_FILES) $(EXE)
 
 bin:
 	mkdir -p bin
+
+umfpack: ref/SuiteSparse/UMFPACK/Makefile ref/SuiteSparse/Makefile
+ifeq (,$(wildcard  ./ref/SuiteSparse/UMFPACK/Lib/libumfpack.a))
+	$(MAKE) -C ref/SuiteSparse/UMFPACK
+endif
 
 bin/%.o : src/%.cpp
 	$(CC) $(CFLAGS) -o $@ $<
