@@ -1,5 +1,7 @@
 #include "graph.h"
 
+std::vector<int> Vertex::v_map_table;
+
 Vertex::Vertex() : v_id(0), x_pos(0), y_pos(0), fixed(false), adj_list()
 {
 }
@@ -31,7 +33,12 @@ void Vertex::addEdge(int a_id, Vertex * a_tgt, float a_weight)
 
 void Vertex::printVertex()
 {
-  std::cout << "Adjacent cells of Vertex : v=" << v_id << ", size=" << adj_list.size() << "\n";
+  std::cout << "Adjacent cells of Vertex : v=" << v_id << ", size=" << adj_list.size();
+
+  if (fixed)
+    std::cout << "; (FIXED_CELL)";
+
+  std::cout << "\n";
   for(auto i = adj_list.begin(); i != adj_list.end(); i++) 
   {
      std::cout << " -> " << (*i).tgt->v_id << "(w=" << (*i).weight << ")";

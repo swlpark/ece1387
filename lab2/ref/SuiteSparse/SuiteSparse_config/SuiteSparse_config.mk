@@ -131,7 +131,8 @@ INSTALL_INCLUDE = /usr/local/include
 # LAPACK =
 
 # OpenBLAS
-  BLAS = -lopenblas
+# PARKLAWR
+ BLAS = -lopenblas
 # LAPACK = 
 
 # NOTE: this next option for the "Goto BLAS" has nothing to do with a "goto"
@@ -231,7 +232,8 @@ METIS = ../../metis-4.0/libmetis.a
 #               included in UMFPACK_CONFIG, then UMFPACK  does not rely on
 #               CHOLMOD, CAMD, CCOLAMD, COLAMD, and METIS.
 
-UMFPACK_CONFIG =
+#UMFPACK_CONFIG =
+UMFPACK_CONFIG = -DNBLAS
 
 # uncomment this line to compile UMFPACK without CHOLMOD:
 # UMFPACK_CONFIG = -DNCHOLMOD

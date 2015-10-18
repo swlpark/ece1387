@@ -11,16 +11,24 @@
 #include <cstdlib>
 #include <cassert>
 #include <ctime>
+#include <cmath>
 #include "graph.h"
-#include "placer.h"
+#include "utility.h"
 
-std::vector<Vertex>        cells; 
-std::vector<vector<int>>   edges; 
-std::vector<double> edge_weights;
+std::vector<double>              edge_weights;
+std::vector<Vertex>              cells; 
+std::vector<std::vector<int>>    nets; 
+std::vector<std::vector<double>> Q;
+std::vector<double>              diag_entries;
+
+void buildQ       (int);
+void assignCellPos(std::vector<double> const &, int);
+std::vector<double> computeHPWL();
 
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
   return lhs.v_id < rhs.v_id;
 }
+
 
 int main(int argc, char *argv[]) {
    using namespace std;
@@ -28,10 +36,10 @@ int main(int argc, char *argv[]) {
    string   f_name;
    ifstream in_file;
 
-   char c;
+   char arg;
    cout << "Starting A2 application... \n" ;
-   while ((c = getopt (argc, argv, "i:")) != -1) {
-      switch (c) {
+   while ((arg = getopt (argc, argv, "i:")) != -1) {
+      switch (arg) {
          case 'i': 
             f_name = string(optarg);
             break;
@@ -44,7 +52,9 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
    }
 
-   //parse input file as a stream
+   //**************************************************************************
+   //* Start of file I/O: parse input file as a stream
+   //**************************************************************************
    string line;
    bool mark_io = false;
    bool sorted  = false;
@@ -81,11 +91,11 @@ int main(int argc, char *argv[]) {
               {
                 int e = line_data.at(i);
                 if (e == -1) break;
-                while ((int)edges.size() < e) {
-                   edges.push_back(vector<int>());
+                while ((int)nets.size() < e) {
+                   nets.push_back(vector<int>());
                 }
 
-                edges[e-1].push_back(c.v_id);
+                nets[e-1].push_back(c.v_id);
               }
             } else { //-1 line
               mark_io = true;
@@ -108,21 +118,22 @@ int main(int argc, char *argv[]) {
          }
       }
    }
-
    if (in_file.bad()) {
       cerr << "I/O Error: There was a problem(s) with reading the file - " << f_name << "\n"; 
       exit(EXIT_FAILURE);
    }
-
    in_file.close();
    cout << "Okay: finished parsing the placer input file : " << f_name << "\n"; 
 
-   //set clique model edge weights
-   edge_weights.resize(edges.size());
-   for(unsigned int i = 0; i < edges.size(); ++i) 
+   //**************************************************************************
+   //* set clique model edge weights
+   //**************************************************************************
+ 
+   edge_weights.resize(nets.size());
+   for(unsigned int i = 0; i < nets.size(); ++i) 
    {
      int edge_id = i + 1;
-     vector<int> & adj_cells = edges.at(i);
+     vector<int> & adj_cells = nets.at(i);
      assert(adj_cells.size() >= 2);
 
      double clique_weight = 2.0 / adj_cells.size();
@@ -136,29 +147,164 @@ int main(int argc, char *argv[]) {
      }
    }
 
-   for(auto it = cells.begin(); it != cells.end(); ++it) 
+   //**************************************************************************
+   //* Build Q matrix and solve x, y positions of movable cells
+   //**************************************************************************
+   int f_pin_cnt=0;
+   int m_idx=0;
+   Vertex::v_map_table.resize(cells.size());
+
+   vector<Vertex> fixed_cells;
+   for(unsigned int i = 0; i < cells.size(); ++i) 
    {
-     (*it).printVertex();
+     cells[i].printVertex();
+     if (cells[i].fixed)
+     {
+        fixed_cells.push_back(cells.at(i));
+        ++f_pin_cnt;
+        Vertex::v_map_table[i] = -1;
+        continue;
+     }
+     Vertex::v_map_table[i] = m_idx;
+     ++m_idx;
    }
 
-   //Q: 2D matrix to solve linear system of quadratic distance
-   //vector of columns
-   vector<vector<double>> Q;
-   Q.resize(cells.size());
-   for(int c=0; c < cells.size(); ++c)
+   buildQ(f_pin_cnt);
+   vector<double> solved_x_y = solveQ(Q, fixed_cells);
+   assignCellPos(solved_x_y, Q.size());
+   vector<double> hwpl_vec = computeHPWL();
+}
+
+//**************************************************************************
+//* compute bounding box HP WL of each net
+//**************************************************************************
+std::vector<double> computeHPWL()
+{
+  std::vector<double> retval;
+  retval.resize(nets.size(), 0);
+  //iterate over nets
+  for(unsigned int n=0; n<nets.size(); ++n) 
+  {
+    double max_x = std::numeric_limits<double>::min();
+    double min_x = std::numeric_limits<double>::max();
+    double max_y = std::numeric_limits<double>::min();
+    double min_y = std::numeric_limits<double>::max();
+
+    //iterate over cells of a net; update mins, maxs
+    for(unsigned int v=0; v<nets.at(n).size(); v++)
+    {
+       if(cells.at(nets[n][v] - 1).x_pos > max_x)
+         max_x = cells.at(nets[n][v] - 1).x_pos;
+       if(cells.at(nets[n][v] - 1).x_pos < min_x)
+         min_x = cells.at(nets[n][v] - 1).x_pos;
+
+       if(cells.at(nets[n][v] - 1).y_pos > max_y)
+         max_y = cells.at(nets[n][v] - 1).y_pos;
+       if(cells.at(nets[n][v] - 1).y_pos < min_y)
+         min_y = cells.at(nets[n][v] - 1).y_pos;
+    }
+    retval[n] = (max_x - min_x) + (max_y - min_y);
+  }
+  return retval;
+}
+
+void assignCellPos(std::vector<double> const & x_y_vec, int m_dim)
+{
+   int v_idx = 0;
+   for(unsigned int i = 0; i < cells.size(); ++i) 
    {
-      Vector& adj_cells = cells.at(c);
-      Q[c].resize(cells.size(), 0.0);
+     if (cells[i].fixed)
+        continue;
+     cells[i].x_pos = x_y_vec.at(v_idx);
+     cells[i].y_pos = x_y_vec.at(v_idx+m_dim);
+     ++v_idx;
+   }
+}
+
+//Q: create Q matrix for AP, built as a list of columns
+void buildQ(int f_pin_cnt)
+{
+   using namespace std;
+   int m_dim = cells.size() - f_pin_cnt;
+   Q.resize(m_dim);
+   diag_entries.resize(m_dim);
+
+   //iterate over movable cells, generate non-diagonal entries of Q
+   int c = 0;
+   int cell_idx = 0;
+   while(c < m_dim)
+   {
+      if (cells[cell_idx].fixed)
+      {
+         ++cell_idx;
+         continue;
+      }
+
+      list<Edge>& adj_cells = cells[cell_idx].adj_list;
+      Q[c].resize(m_dim, 0.0);
 
       //iterating over the edge list
       for(auto it = adj_cells.begin(); it != adj_cells.end(); ++it)
       {
-         int r_idx; //which row in a given column to update?
-         
-
+         if ((*it).tgt->fixed)
+           continue;
+         int r_idx = Vertex::v_map_table.at((*it).tgt->v_id - 1); //which row in a given column to update?
+         assert(r_idx < m_dim && r_idx >= 0);
+         Q[c][r_idx] -= (*it).weight;
       }
-      
+      ++c;
+      ++cell_idx;
    }
 
+   //iterate over fixed cells, add to diagonal_entries
+   c = 0;
+   cell_idx = 0;
+   while(c < f_pin_cnt)
+   {
+      if (!cells[cell_idx].fixed)
+      {
+         ++cell_idx;
+         continue;
+      }
 
+      list<Edge>& adj_cells = cells[cell_idx].adj_list;
+      //iterating over the edge list
+      for(auto it = adj_cells.begin(); it != adj_cells.end(); ++it)
+      {
+         if ((*it).tgt->fixed)
+           continue;
+         int idx = Vertex::v_map_table.at((*it).tgt->v_id - 1);
+         assert(idx < m_dim && idx >= 0);
+         diag_entries[idx] += (*it).weight;
+      }
+      ++c;
+      ++cell_idx;
+   }
+
+   //iterate over rows, add row sum to diagonal_entries
+   for (int r=0; r<m_dim; ++r)
+   {
+     double row_sum = 0;
+     for(int c=0; c<m_dim; ++c)
+     {
+        row_sum += fabs(Q[c][r]);
+     }
+     diag_entries[r] += row_sum;
+     Q[r][r] = diag_entries[r];
+   }
+
+   //check that Q matrix is symmetrical
+   for (int r=0; r<m_dim; ++r)
+   {
+     cout << "Row " << r << ": ";
+     for(int c=0; c<m_dim; ++c)
+     {
+         assert(Q[r][c] == Q[c][r]);
+
+         if(!(Q[c][r] < 0))
+            cout << " ";
+         cout << Q[c][r] << " ";
+     }
+     cout << "\n";
+   }
 }
