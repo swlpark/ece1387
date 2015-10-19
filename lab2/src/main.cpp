@@ -1,4 +1,5 @@
 #include "main.h"
+#define MIN_SWAP_TRIALS 10000
 
 std::vector<Vertex>              cells; 
 std::vector<Vertex>              fixed_cells;
@@ -8,9 +9,11 @@ std::vector<std::vector<double>> Q;
 std::vector<double>              diag_entries;
 
 std::vector<double> computeHPWL();
+void                swapIOPair(Vertex*, unsigned int);
 void                displayHPWL(std::vector<double> const &);
 void                buildQ(int);
 void                assignCellPos(std::vector<double> const &, int);
+void                updateFCellPos(std::vector<double> const &);
 
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
   return lhs.v_id < rhs.v_id;
@@ -164,10 +167,89 @@ int main(int argc, char *argv[]) {
    buildQ(f_pin_cnt);
    vector<double> solved_x_y = solveQ(Q, fixed_cells);
    assignCellPos(solved_x_y, Q.size());
-   vector<double> hwpl_vec = computeHPWL();
-   displayHPWL(hwpl_vec);
+   vector<double> hpwl_vec = computeHPWL();
 
+   //A2:Q2, SWAP experiments
+   //Note: Q array remains constant while I/O (i.e. fixed) cells' x y pos is swapped
+   if (opt_swap)
+   {
+      double min_hpwl = std::numeric_limits<double>::max();
+      double max_hpwl = std::numeric_limits<double>::min();
+      double hpwl_sum = hpwl_vec.at(hpwl_vec.size() - 1);
+      double hpwl_avg = hpwl_vec.at(hpwl_vec.size() - 1);
+      double relative_delta = 0;
+
+      int swap_cnt = 0;
+
+      //perform pin location swaps until moving avg delta is less than 1%
+      do
+      {
+        swapIOPair(&fixed_cells[0], fixed_cells.size());
+        solved_x_y = solveQ(Q, fixed_cells);
+        assignCellPos(solved_x_y, Q.size());
+        hpwl_vec = computeHPWL();
+
+        if(hpwl_vec.at(hpwl_vec.size()-1) > max_hpwl)
+          max_hpwl = hpwl_vec.at(hpwl_vec.size() - 1);
+        if(hpwl_vec.at(hpwl_vec.size()-1) < min_hpwl)
+          min_hpwl = hpwl_vec.at(hpwl_vec.size() - 1);
+        ++swap_cnt;
+
+        hpwl_sum += hpwl_vec.at(hpwl_vec.size() - 1);
+        relative_delta = fabs(hpwl_avg - (hpwl_sum / (swap_cnt + 1))) / hpwl_avg;
+        hpwl_avg = hpwl_sum / (swap_cnt + 1);
+
+      //} while(swap_cnt < MAX_SWAP_TRIALS);
+      } while(relative_delta > 0.000001 || swap_cnt < MIN_SWAP_TRIALS);
+
+      unsigned int f_idx = 0;
+      //update swapped cells location in the cells vector for graphis
+      for(unsigned int i = 0; i < cells.size(); ++i) 
+      {
+        if (!cells[i].fixed)
+           continue;
+        cells[i].x_pos = fixed_cells.at(f_idx).x_pos;
+        cells[i].y_pos = fixed_cells.at(f_idx).y_pos;
+        ++f_idx;
+      }
+      std::cout << "//------------------------------------------------------------\n";
+      std::cout << "// Q2 Experiments result (swaps performed = " << swap_cnt << ")\n";
+      std::cout << "//------------------------------------------------------------\n";
+      std::cout << "The Best HPWL : " << min_hpwl << "\n";
+      std::cout << "The Worst HPWL : " << max_hpwl << "\n";
+      std::cout << "Average HPWL : " << hpwl_avg << "\n";
+   }
+
+   displayHPWL(hpwl_vec);
    begin_graphics();
+}
+
+void swapIOPair(Vertex * io_cells, unsigned int f_dim)
+{
+  //Seed with a real random value, if available
+  std::random_device rd;
+  std::default_random_engine e1(rd());
+  std::uniform_int_distribution<unsigned int> uniform_dist(0, f_dim-1);
+
+  unsigned int idx_a = uniform_dist(e1);
+  unsigned int idx_b = uniform_dist(e1);
+
+  while(idx_a == idx_b) {
+   idx_b = uniform_dist(e1);
+  }
+
+  //array range bound
+  assert(idx_a < f_dim && idx_a >= 0 && idx_b < f_dim && idx_b >= 0);
+
+  double tmp_x, tmp_y;
+  tmp_x =  io_cells[idx_a].x_pos;
+  tmp_y =  io_cells[idx_a].y_pos;
+
+  io_cells[idx_a].x_pos = io_cells[idx_b].x_pos;
+  io_cells[idx_a].y_pos = io_cells[idx_b].y_pos;
+
+  io_cells[idx_b].x_pos = tmp_x;
+  io_cells[idx_b].y_pos = tmp_y;
 }
 
 //**************************************************************************
@@ -176,7 +258,7 @@ int main(int argc, char *argv[]) {
 std::vector<double> computeHPWL()
 {
   std::vector<double> retval;
-  retval.resize(nets.size(), 0);
+  retval.resize(nets.size()+1, 0);
   //iterate over nets
   for(unsigned int n=0; n<nets.size(); ++n) 
   {
@@ -200,21 +282,23 @@ std::vector<double> computeHPWL()
     }
     retval[n] = (max_x - min_x) + (max_y - min_y);
   }
+
+  //last hpwl_vec entry is the sum of all HPWL
+  double hpwl_sum = std::accumulate(retval.begin(), retval.end(), 0.0);
+  retval[nets.size()] = hpwl_sum;
   return retval;
 }
 
 void displayHPWL(std::vector<double> const & hpwl_vec)
 {
   std::cout << "//------------------------------------------------------------\n";
-  std::cout << "// HPWL of placed cells (cell_cnt =" << cells.size() << ", net_cnt=" << nets.size() << "\n";
+  std::cout << "// HPWL of placed cells (cell_cnt =" << cells.size() << ", net_cnt=" << nets.size() << ")\n";
   std::cout << "//------------------------------------------------------------\n";
-  for(unsigned int i=0; i < hpwl_vec.size(); i=i+1)
+  for(unsigned int i=0; i < nets.size(); i=i+1)
   {
     std::cout << "Net " << i+1 << " HPWL : " << hpwl_vec.at(i) << "\n";
   }
-  double hpwl_sum = std::accumulate(hpwl_vec.begin(), hpwl_vec.end(), 0.0);
-
-  std::cout << "Total HPWL= " << hpwl_sum << "\n";
+  std::cout << "Total HPWL= " << hpwl_vec.at(nets.size()) << "\n";
 }
 
 void assignCellPos(std::vector<double> const & x_y_vec, int m_dim)

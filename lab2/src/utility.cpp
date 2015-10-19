@@ -203,14 +203,6 @@ void drawscreen (void)
    //used edge set 
    std::unordered_set<std::pair<int, int>> u_edges;
 
-   //std::cout << "DEBUG: set size=" << u_edges.size() << "\n";
-   //u_edges.insert(std::pair<int, int>(111,999));
-   //u_edges.insert(std::pair<int, int>(999,111));
-   //u_edges.insert(std::pair<int, int>(111,999));
-   //std::cout << "DEBUG: set size=" << u_edges.size() << "\n";
-   //u_edges.insert(std::pair<int, int>(444,445));
-   //std::cout << "DEBUG: set size=" << u_edges.size() << "\n";
-
    int drawn_lines =0;
    for(auto f_iter = fixed_cells.begin();  f_iter != fixed_cells.end(); ++f_iter)
    {

@@ -15,6 +15,7 @@
 #include <cassert>
 #include <ctime>
 #include <cmath>
+#include <random>
 #include "graph.h"
 #include "utility.h"
 

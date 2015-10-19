@@ -1,5 +1,6 @@
 CC = g++
-CFLAGS = -g -O0 -c -Wall -std=c++11 
+#CFLAGS = -g -O0 -c -Wall -std=c++11 
+CFLAGS = -g -O1 -c -Wall -std=c++11 
 INC=-Iref/SuiteSparse/AMD/Include -Iref/SuiteSparse/UMFPACK/Include -Iref/SuiteSparse/SuiteSparse_config
 
 
