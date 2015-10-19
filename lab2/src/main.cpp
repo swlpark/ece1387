@@ -7,9 +7,10 @@ std::vector<double>              edge_weights;
 std::vector<std::vector<double>> Q;
 std::vector<double>              diag_entries;
 
-void buildQ       (int);
-void assignCellPos(std::vector<double> const &, int);
 std::vector<double> computeHPWL();
+void                displayHPWL(std::vector<double> const &);
+void                buildQ(int);
+void                assignCellPos(std::vector<double> const &, int);
 
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
   return lhs.v_id < rhs.v_id;
@@ -21,12 +22,18 @@ int main(int argc, char *argv[]) {
    string   f_name;
    ifstream in_file;
 
+   //option to swap
+   bool opt_swap = false;
+
    char arg;
    cout << "Starting A2 application... \n" ;
-   while ((arg = getopt (argc, argv, "i:")) != -1) {
+   while ((arg = getopt (argc, argv, "i:s")) != -1) {
       switch (arg) {
          case 'i': 
             f_name = string(optarg);
+            break;
+         case 's': 
+            opt_swap = true;
             break;
       }
    }
@@ -113,7 +120,6 @@ int main(int argc, char *argv[]) {
    //**************************************************************************
    //* set clique model edge weights
    //**************************************************************************
- 
    edge_weights.resize(nets.size());
    for(unsigned int i = 0; i < nets.size(); ++i) 
    {
@@ -159,12 +165,13 @@ int main(int argc, char *argv[]) {
    vector<double> solved_x_y = solveQ(Q, fixed_cells);
    assignCellPos(solved_x_y, Q.size());
    vector<double> hwpl_vec = computeHPWL();
+   displayHPWL(hwpl_vec);
 
    begin_graphics();
 }
 
 //**************************************************************************
-//* compute bounding box HP WL of each net
+//* compute bounding box HPWL of each net
 //**************************************************************************
 std::vector<double> computeHPWL()
 {
@@ -194,6 +201,20 @@ std::vector<double> computeHPWL()
     retval[n] = (max_x - min_x) + (max_y - min_y);
   }
   return retval;
+}
+
+void displayHPWL(std::vector<double> const & hpwl_vec)
+{
+  std::cout << "//------------------------------------------------------------\n";
+  std::cout << "// HPWL of placed cells (cell_cnt =" << cells.size() << ", net_cnt=" << nets.size() << "\n";
+  std::cout << "//------------------------------------------------------------\n";
+  for(unsigned int i=0; i < hpwl_vec.size(); i=i+1)
+  {
+    std::cout << "Net " << i+1 << " HPWL : " << hpwl_vec.at(i) << "\n";
+  }
+  double hpwl_sum = std::accumulate(hpwl_vec.begin(), hpwl_vec.end(), 0.0);
+
+  std::cout << "Total HPWL= " << hpwl_sum << "\n";
 }
 
 void assignCellPos(std::vector<double> const & x_y_vec, int m_dim)

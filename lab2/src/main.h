@@ -8,6 +8,7 @@
 #include <map>
 #include <cstdlib>
 #include <algorithm>
+#include <numeric>
 #include <iterator>
 #include <unistd.h>
 #include <cstdlib>

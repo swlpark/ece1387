@@ -1,10 +1,4 @@
 #include "utility.h"
-struct pair_hash
-{
-    inline std::size_t operator()(const std::pair<int,int> & v) const {
-        return v.first*31+v.second;
-    }
-};
 
 std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::vector<Vertex> const & fixed_cells)
 {
@@ -207,7 +201,17 @@ void drawscreen (void)
 
    setcolor(RED);
    //used edge set 
-   std::unordered_set<std::pair<int, int>, pair_hash> u_edges;
+   std::unordered_set<std::pair<int, int>> u_edges;
+
+   //std::cout << "DEBUG: set size=" << u_edges.size() << "\n";
+   //u_edges.insert(std::pair<int, int>(111,999));
+   //u_edges.insert(std::pair<int, int>(999,111));
+   //u_edges.insert(std::pair<int, int>(111,999));
+   //std::cout << "DEBUG: set size=" << u_edges.size() << "\n";
+   //u_edges.insert(std::pair<int, int>(444,445));
+   //std::cout << "DEBUG: set size=" << u_edges.size() << "\n";
+
+   int drawn_lines =0;
    for(auto f_iter = fixed_cells.begin();  f_iter != fixed_cells.end(); ++f_iter)
    {
      std::list<Edge>& adj_cells = f_iter->adj_list;
@@ -220,15 +224,16 @@ void drawscreen (void)
 
         //skip if edge is found in the set
         if (set_idx != u_edges.end()) {
-           std::cout << "DEBUG: set found a duplicate edge, src_cell=" << f_iter->v_id  <<"\n";
+           //std::cout << "DEBUG: set found a duplicate edge, src_cell=" << f_iter->v_id  <<"\n";
            continue;
         }
         u_edges.insert(edge);
         drawline(f_iter->x_pos, f_iter->y_pos, 
                  t_iter->tgt->x_pos, t_iter->tgt->y_pos);
-
+        drawn_lines++;
      }
    }
 
+   std::cout << "Number of lines drawn: " << drawn_lines << "\n";
 }
 
