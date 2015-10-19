@@ -1,4 +1,10 @@
 #include "utility.h"
+struct pair_hash
+{
+    inline std::size_t operator()(const std::pair<int,int> & v) const {
+        return v.first*31+v.second;
+    }
+};
 
 std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::vector<Vertex> const & fixed_cells)
 {
@@ -123,17 +129,106 @@ std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::ve
   return retval;
 }
 
-void begin_graphics (void) {
-   t_bound_box initial_coords = t_bound_box(0,0,100,100); 
+void begin_graphics (void)
+{
+   t_bound_box initial_coords = t_bound_box(0,0,100,100);
 
-   init_graphics("Analytical Placer ", WHITE);
+   init_graphics("Analytical Placer", WHITE);
    set_visible_world(initial_coords);
 
-   //std::ostringstream str_buf;
-   //str_buf << grid_dim << " x " << grid_dim << " Grid";
-   //std::string disp_str = str_buf.str();
-   //update_message(disp_str);
-   //event_loop(NULL, NULL, NULL, drawscreen);   
+   std::ostringstream str_buf;
+   str_buf << cells.size() << " cells placed with " << nets.size() << " nets";
+   std::string disp_str = str_buf.str();
+   update_message(disp_str);
+   event_loop(NULL, NULL, NULL, drawscreen);   
    //t_bound_box old_coords = get_visible_world();
+}
+
+void drawscreen (void)
+{
+   clearscreen();
+   //----------------------
+   // Draw Grid Rectangles
+   //----------------------
+   //color_types color_indicies[] = {
+   //   LIGHTGREY,
+   //   DARKGREY,
+   //   WHITE,
+   //   BLACK,
+   //   BLUE,
+   //   GREEN,
+   //   YELLOW,
+   //   CYAN,
+   //   RED,
+   //   DARKGREEN,
+   //   MAGENTA
+   //};
+
+   for(auto it = cells.begin(); it != cells.end(); ++it)
+   {
+      t_point bt_marker = t_point(it->x_pos - 0.3, it->y_pos - 0.3);
+      t_bound_box cell_rect = t_bound_box(bt_marker, 0.6, 0.6);
+      if (it->fixed)
+        setcolor(RED);
+      else
+        setcolor(BLUE);
+      fillrect(cell_rect);
+   }
+
+   setcolor(MAGENTA);
+   setlinestyle(SOLID);
+   setlinewidth(1);
+   std::vector<int> q_to_c_map;
+   q_to_c_map.resize(Q.size());
+
+   unsigned int q_idx=0;
+   for(unsigned int i=0; i<cells.size(); i++)
+   {
+      if (Vertex::v_map_table[i] == -1)
+        continue;
+      assert(q_idx < Q.size());
+      q_to_c_map[q_idx++] = i;
+   }
+
+   //draw lines between movable cells
+   for(unsigned int c=0; c<Q.size(); c++)
+   {
+      for(unsigned int r=c+1; r<Q.size(); r++)
+      {
+         if (Q[c][r] != 0)
+         {
+             int src_idx = q_to_c_map.at(c);
+             int tgt_idx = q_to_c_map.at(r);
+             drawline(cells[src_idx].x_pos, cells[src_idx].y_pos, 
+                      cells[tgt_idx].x_pos, cells[tgt_idx].y_pos);
+         }
+      }
+   }
+
+   setcolor(RED);
+   //used edge set 
+   std::unordered_set<std::pair<int, int>, pair_hash> u_edges;
+   for(auto f_iter = fixed_cells.begin();  f_iter != fixed_cells.end(); ++f_iter)
+   {
+     std::list<Edge>& adj_cells = f_iter->adj_list;
+
+     //iterating over the edge list to draw
+     for(auto t_iter = adj_cells.begin(); t_iter != adj_cells.end(); ++t_iter)
+     {
+        std::pair<int, int> edge (f_iter->v_id, t_iter->tgt->v_id);
+        auto set_idx = u_edges.find(edge);
+
+        //skip if edge is found in the set
+        if (set_idx != u_edges.end()) {
+           std::cout << "DEBUG: set found a duplicate edge, src_cell=" << f_iter->v_id  <<"\n";
+           continue;
+        }
+        u_edges.insert(edge);
+        drawline(f_iter->x_pos, f_iter->y_pos, 
+                 t_iter->tgt->x_pos, t_iter->tgt->y_pos);
+
+     }
+   }
+
 }
 

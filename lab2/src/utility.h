@@ -8,17 +8,20 @@
 #include <iostream>
 #include <sstream>
 #include <iterator>
+#include <utility>
+#include <unordered_set>
 
 #include "graph.h"
 #include "umfpack.h"
 #include "graphics.h"
+#include "main.h"
 
 //analytical placement related
 std::vector<double> solveQ(std::vector<std::vector<double>>const &, std::vector<Vertex> const &);
 
 //graphics related
-void drawscreen     (void);
 void begin_graphics (void);
+void drawscreen     (void);
 
 #endif
 

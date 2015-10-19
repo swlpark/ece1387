@@ -1,23 +1,9 @@
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <map>
-#include <cstdlib>
-#include <algorithm>
-#include <iterator>
-#include <unistd.h>
-#include <cstdlib>
-#include <cassert>
-#include <ctime>
-#include <cmath>
-#include "graph.h"
-#include "utility.h"
+#include "main.h"
 
-std::vector<double>              edge_weights;
 std::vector<Vertex>              cells; 
+std::vector<Vertex>              fixed_cells;
 std::vector<std::vector<int>>    nets; 
+std::vector<double>              edge_weights;
 std::vector<std::vector<double>> Q;
 std::vector<double>              diag_entries;
 
@@ -28,7 +14,6 @@ std::vector<double> computeHPWL();
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
   return lhs.v_id < rhs.v_id;
 }
-
 
 int main(int argc, char *argv[]) {
    using namespace std;
@@ -154,10 +139,11 @@ int main(int argc, char *argv[]) {
    int m_idx=0;
    Vertex::v_map_table.resize(cells.size());
 
-   vector<Vertex> fixed_cells;
    for(unsigned int i = 0; i < cells.size(); ++i) 
    {
+#ifdef _DEBUG_
      cells[i].printVertex();
+#endif
      if (cells[i].fixed)
      {
         fixed_cells.push_back(cells.at(i));
@@ -173,6 +159,8 @@ int main(int argc, char *argv[]) {
    vector<double> solved_x_y = solveQ(Q, fixed_cells);
    assignCellPos(solved_x_y, Q.size());
    vector<double> hwpl_vec = computeHPWL();
+
+   begin_graphics();
 }
 
 //**************************************************************************
