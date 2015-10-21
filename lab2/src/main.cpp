@@ -8,6 +8,9 @@ std::vector<Vertex>                 fixed_cells;
 std::vector<Vertex>                 virtual_pins;
 std::vector<std::vector<double>>    Q;
 
+//number of spread performed to meet overlap <= 0.15
+int spread_cnt=0;
+
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
   return lhs.v_id < rhs.v_id;
 }
@@ -181,13 +184,11 @@ int main(int argc, char *argv[]) {
         ++m_idx;
       }
 
-      recursive_spread(m_points, 1.0, 100, std::pair<double, double>(0, 0));
+      recursive_spread(m_points, 1.5, 100, std::pair<double, double>(0, 0));
 #ifdef _DEBUG_
      for(unsigned int i = 0; i < virtual_pins.size(); ++i)
         virtual_pins[i].printVertex();
 #endif
-      solved_x_y = solveQ(Q, fixed_cells, &virtual_pins);
-      assignCellPos(solved_x_y, Q.size());
       hpwl_vec = computeHPWL();
    }
 
@@ -242,6 +243,7 @@ int main(int argc, char *argv[]) {
    }
 
    displayHPWL(hpwl_vec);
+   std::cout << "Number of recursive spreading perfomed : " << spread_cnt << "\n";
    begin_graphics();
 }
 
@@ -308,13 +310,25 @@ void recursive_spread(std::vector<std::tuple<int,double,double>> & points, doubl
   double h_width = grid_width / 2;
   double q_width = grid_width / 4;
 
+  double sw_x = grid_zero_pos.first + q_width;
+  double sw_y = grid_zero_pos.second + q_width;
+
+  //double nw_x = sw_x;
+  double nw_y = sw_y + h_width;
+
+  double se_x = sw_x + h_width;
+  //double se_y = sw_y;
+
+  //double ne_x = se_x;
+  //double ne_y = nw_y;
+
   Vertex v_pin;
   //build a virtual pin at the SW sub-quadrant
   v_pin.v_id = ++vp_idx;
   v_pin.fixed = true;
   v_pin.v_pin = true;
-  v_pin.x_pos = grid_zero_pos.first + q_width;
-  v_pin.y_pos = grid_zero_pos.second + q_width;
+  v_pin.x_pos = sw_x;
+  v_pin.y_pos = sw_y;
   unsigned int cell_idx;
   for(unsigned int i = 0; i < nw_idx; ++i)
   {
@@ -327,7 +341,7 @@ void recursive_spread(std::vector<std::tuple<int,double,double>> & points, doubl
 
   //build a virtual pin at the NW sub-quadrant
   v_pin.v_id = ++vp_idx;
-  v_pin.y_pos += h_width;
+  v_pin.y_pos = nw_y;
   for(unsigned int i = nw_idx; i < se_idx; ++i)
   {
      cell_idx = std::get<0>(points.at(i)) - 1;
@@ -339,8 +353,8 @@ void recursive_spread(std::vector<std::tuple<int,double,double>> & points, doubl
 
   //build a virtual pin at the SE sub-quadrant
   v_pin.v_id = ++vp_idx;
-  v_pin.x_pos += h_width;
-  v_pin.y_pos = grid_zero_pos.second + q_width;
+  v_pin.x_pos = se_x;
+  v_pin.y_pos = sw_y;
   for(unsigned int i = se_idx; i < ne_idx; ++i)
   {
      cell_idx = std::get<0>(points.at(i)) - 1;
@@ -352,7 +366,7 @@ void recursive_spread(std::vector<std::tuple<int,double,double>> & points, doubl
 
   //build a virtual pin at the NE sub-quadrant
   v_pin.v_id = ++vp_idx;
-  v_pin.y_pos += h_width;
+  v_pin.y_pos = nw_y;
   for(unsigned int i = ne_idx; i < points.size(); ++i)
   {
      cell_idx = std::get<0>(points.at(i)) - 1;
@@ -360,8 +374,100 @@ void recursive_spread(std::vector<std::tuple<int,double,double>> & points, doubl
      v_pin.addEdge(vp_idx, &cells[cell_idx], v_pin_weight);
   }
   virtual_pins.push_back(v_pin);
+
+  //re-solve X, Y coordinates of movable cells
+  std::vector<double> solved_x_y = solveQ(Q, fixed_cells, &virtual_pins);
+  assignCellPos(solved_x_y, Q.size());
+
+  ++spread_cnt;
+  //re-curse until check over
+  if (!checkOverlapReq())
+  {
+    if (nw_idx >= 4) {
+      std::vector<std::tuple<int,double,double>> sw_points(&points[0], &points[nw_idx]);
+      recursive_spread(sw_points, v_pin_weight*1.4, grid_width / 2.0, std::pair<double, double>(grid_zero_pos.first, grid_zero_pos.second));
+    }
+    else {
+       std::cout << "DEBUG: stopping recursive spreading at SW due to lack of points\n";
+    }
+
+    if ((se_idx - nw_idx) >= 4) {
+      std::vector<std::tuple<int,double,double>> nw_points(&points[nw_idx], &points[se_idx]);
+      recursive_spread(nw_points, v_pin_weight*1.4, grid_width / 2.0, std::pair<double, double>(grid_zero_pos.first, grid_zero_pos.second + h_width));
+    }
+    else {
+       std::cout << "DEBUG: stopping recursive spreading at NW due to lack of points\n";
+    }
+
+    if ((ne_idx - se_idx) >= 4) {
+      std::vector<std::tuple<int,double,double>> se_points(&points[se_idx], &points[ne_idx]);
+      recursive_spread(se_points, v_pin_weight*1.4, grid_width / 2.0, std::pair<double, double>(grid_zero_pos.first + h_width, grid_zero_pos.second));
+    }
+    else {
+       std::cout << "DEBUG: stopping recursive spreading at SE due to lack of points\n";
+    }
+
+    if ((points.size() - ne_idx) >= 4) {
+      std::vector<std::tuple<int,double,double>> ne_points(&points[ne_idx], &points[points.size()]);
+      recursive_spread(ne_points, v_pin_weight*1.4, grid_width / 2.0, std::pair<double, double>(grid_zero_pos.first + h_width, grid_zero_pos.second + h_width));
+    }
+    else {
+       std::cout << "DEBUG: stopping recursive spreading at NE due to lack of points\n";
+    }
+  }  
 }
 
+bool checkOverlapReq()
+{
+  //calculate overlap in each 10x10 bin in a 100x100 chip die
+  int overlap_bins[100] = {};
+  unsigned int row_offset = 0;
+  unsigned int col_offset = 0;
+
+  //Total number of movable cells in a chip
+  int N = 0;
+  for(unsigned int i = 0; i < cells.size(); ++i) 
+  {
+    Vertex v = cells.at(i);
+    if (v.fixed)
+       continue;
+
+    row_offset = (unsigned int)floor(v.y_pos / 10.0);
+    row_offset *= 10;
+    assert(row_offset >= 0 && row_offset < 100 && !(row_offset % 10));
+
+    col_offset = (unsigned int)floor(v.x_pos / 10.0);
+    assert(col_offset >= 0 && col_offset < 10);
+
+    overlap_bins[row_offset + col_offset] += 1; 
+    ++N;
+  }
+
+  std::cout << "//------------------------------------------------------------\n";
+  std::cout << "// Overlap Bin Matrix 10x10\n";
+  std::cout << "//------------------------------------------------------------\n";
+  
+  unsigned int overlap_cnt = 0;
+  for(int r = 9; r >= 0; --r) 
+  {
+    std::cout << "Row " << r << ": " << overlap_bins[r*10];
+    for(int c = 0; c < 10; ++c) 
+    {
+      if(overlap_bins[r*10+c] > 2) {
+         overlap_cnt += overlap_bins[r*10+c] - 2;
+      }
+      std::cout << " " << overlap_bins[r*10+c];
+    }
+    std::cout << "\n";
+  }
+
+  double overlap_ratio = (double)overlap_cnt / (double)N;
+
+  if (overlap_ratio > 0.15)
+     return false;
+
+  return true;
+}
 
 void swapIOPair(Vertex * io_cells, unsigned int f_dim)
 {

@@ -200,7 +200,15 @@ void drawscreen (void)
       fillrect(cell_rect);
    }
 
-   setcolor(MAGENTA);
+   setcolor(BLACK);
+   for(auto it = virtual_pins.begin(); it != virtual_pins.end(); ++it)
+   {
+      t_point bt_marker = t_point(it->x_pos - 0.3, it->y_pos - 0.3);
+      t_bound_box cell_rect = t_bound_box(bt_marker, 0.6, 0.6);
+      fillrect(cell_rect);
+   }
+
+   setcolor(MEDIUMPURPLE);
    setlinestyle(SOLID);
    setlinewidth(1);
    std::vector<int> q_to_c_map;
