@@ -224,7 +224,6 @@ void drawscreen (void)
    }
 
    int drawn_lines =0;
-
    //draw lines between movable cells
    for(unsigned int c=0; c<Q.size(); c++)
    {

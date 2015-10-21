@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
         ++m_idx;
       }
 
-      recursive_spread(m_points, 1.5, 100, std::pair<double, double>(0, 0));
+      recursive_spread(m_points,  1, 100, std::pair<double, double>(0, 0));
 #ifdef _DEBUG_
      for(unsigned int i = 0; i < virtual_pins.size(); ++i)
         virtual_pins[i].printVertex();
@@ -249,6 +249,7 @@ int main(int argc, char *argv[]) {
 
 void recursive_spread(std::vector<std::tuple<int,double,double>> & points, double v_pin_weight, double grid_width, std::pair<double, double> grid_zero_pos)
 {
+
   static int vp_idx=0;
   static bool high_bias = false;
 
@@ -265,7 +266,13 @@ void recursive_spread(std::vector<std::tuple<int,double,double>> & points, doubl
   }
 
   std::cout << "DEBUG: after adding to diagonal entries\n";
-  assertQSymmetry(true);
+  std::cout << "Diag Entries : ";
+  for(unsigned int i = 0; i< Q.size(); ++i)
+  {
+     std::cout << Q[i][i] << " ";
+  }
+  std::cout << "\n";
+  assertQSymmetry(false);
 
   //partition points into 4 quadrants, sorted by x_dim and then by y_dim 
   partition_quadrants(points);
@@ -384,6 +391,7 @@ void recursive_spread(std::vector<std::tuple<int,double,double>> & points, doubl
   if (!checkOverlapReq())
   {
     if (nw_idx >= 4) {
+      std::cout << "Debug: continue RECURSE at SW corner due to lack of points\n";
       std::vector<std::tuple<int,double,double>> sw_points(&points[0], &points[nw_idx]);
       recursive_spread(sw_points, v_pin_weight*1.4, grid_width / 2.0, std::pair<double, double>(grid_zero_pos.first, grid_zero_pos.second));
     }
@@ -446,7 +454,6 @@ bool checkOverlapReq()
   std::cout << "//------------------------------------------------------------\n";
   std::cout << "// Overlap Bin Matrix 10x10\n";
   std::cout << "//------------------------------------------------------------\n";
-  
   unsigned int overlap_cnt = 0;
   for(int r = 9; r >= 0; --r) 
   {
