@@ -1,19 +1,12 @@
 #include "main.h"
-#define MIN_SWAP_TRIALS 10000
+#define MIN_SWAP_TRIALS 1000
 
-std::vector<Vertex>              cells; 
-std::vector<Vertex>              fixed_cells;
-std::vector<std::vector<int>>    nets; 
-std::vector<double>              edge_weights;
-std::vector<std::vector<double>> Q;
-std::vector<double>              diag_entries;
-
-std::vector<double> computeHPWL();
-void                swapIOPair(Vertex*, unsigned int);
-void                displayHPWL(std::vector<double> const &);
-void                buildQ(int);
-void                assignCellPos(std::vector<double> const &, int);
-void                updateFCellPos(std::vector<double> const &);
+std::vector<Vertex>                 cells; 
+std::vector<std::vector<int>>       nets; 
+std::vector<double>                 edge_weights;
+std::vector<Vertex>                 fixed_cells;
+std::vector<Vertex>                 virtual_pins;
+std::vector<std::vector<double>>    Q;
 
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
   return lhs.v_id < rhs.v_id;
@@ -27,16 +20,20 @@ int main(int argc, char *argv[]) {
 
    //option to swap
    bool opt_swap = false;
+   bool opt_spread = false;
 
    char arg;
    cout << "Starting A2 application... \n" ;
-   while ((arg = getopt (argc, argv, "i:s")) != -1) {
+   while ((arg = getopt (argc, argv, "i:so")) != -1) {
       switch (arg) {
          case 'i': 
             f_name = string(optarg);
             break;
          case 's': 
             opt_swap = true;
+            break;
+         case 'o': 
+            opt_spread = true;
             break;
       }
    }
@@ -165,9 +162,34 @@ int main(int argc, char *argv[]) {
    }
 
    buildQ(f_pin_cnt);
-   vector<double> solved_x_y = solveQ(Q, fixed_cells);
+   vector<double> solved_x_y;
+   vector<double> hpwl_vec;
+
+   solved_x_y = solveQ(Q, fixed_cells, nullptr);
    assignCellPos(solved_x_y, Q.size());
-   vector<double> hpwl_vec = computeHPWL();
+   hpwl_vec = computeHPWL();
+
+   if (opt_spread) //A2:Q3 & Q4 - recursive spreading
+   {
+      std::vector<std::tuple<int,double,double>> m_points(Q.size());
+      unsigned int m_idx = 0;
+      for(unsigned int i = 0; i < cells.size(); ++i) 
+      {
+        if (cells[i].fixed)
+           continue;
+        m_points[m_idx] = std::tuple<int,double,double>(cells[i].v_id, cells[i].x_pos, cells[i].y_pos);
+        ++m_idx;
+      }
+
+      recursive_spread(m_points, 1.0, 100, std::pair<double, double>(0, 0));
+#ifdef _DEBUG_
+     for(unsigned int i = 0; i < virtual_pins.size(); ++i)
+        virtual_pins[i].printVertex();
+#endif
+      solved_x_y = solveQ(Q, fixed_cells, &virtual_pins);
+      assignCellPos(solved_x_y, Q.size());
+      hpwl_vec = computeHPWL();
+   }
 
    //A2:Q2, SWAP experiments
    //Note: Q array remains constant while I/O (i.e. fixed) cells' x y pos is swapped
@@ -180,12 +202,11 @@ int main(int argc, char *argv[]) {
       double relative_delta = 0;
 
       int swap_cnt = 0;
-
       //perform pin location swaps until moving avg delta is less than 1%
       do
       {
         swapIOPair(&fixed_cells[0], fixed_cells.size());
-        solved_x_y = solveQ(Q, fixed_cells);
+        solved_x_y = solveQ(Q, fixed_cells, nullptr);
         assignCellPos(solved_x_y, Q.size());
         hpwl_vec = computeHPWL();
 
@@ -223,6 +244,124 @@ int main(int argc, char *argv[]) {
    displayHPWL(hpwl_vec);
    begin_graphics();
 }
+
+void recursive_spread(std::vector<std::tuple<int,double,double>> & points, double v_pin_weight, double grid_width, std::pair<double, double> grid_zero_pos)
+{
+  static int vp_idx=0;
+  static bool high_bias = false;
+
+  assert(points.size() >= 4);
+
+  //add virtual pin weights to diagnoal entries in Q
+  for(auto it = points.begin(); it != points.end(); ++it)
+  {
+     //idx locate which dia
+     unsigned int idx = Vertex::v_map_table.at(std::get<0>(*it)- 1);
+     assert(!cells[std::get<0>(*it)- 1].fixed);
+     assert(idx < Q.size() && idx >= 0);
+     Q[idx][idx] += v_pin_weight;
+  }
+
+  std::cout << "DEBUG: after adding to diagonal entries\n";
+  assertQSymmetry(true);
+
+  //partition points into 4 quadrants, sorted by x_dim and then by y_dim 
+  partition_quadrants(points);
+  
+  //marks start of cells in 4 quadrants in the partitioned points vector
+  //unsigned int sw_idx=0;
+  unsigned int nw_idx;
+  unsigned int se_idx;
+  unsigned int ne_idx;
+
+  if (points.size() % 2) {
+    if(high_bias) {
+      nw_idx = points.size() / 4;
+      se_idx = points.size() / 2; 
+      ne_idx = nw_idx + se_idx + 1;
+      high_bias = false;
+    } else {
+      nw_idx = (points.size() / 4) + 1;
+      se_idx = (points.size() / 2) + 1;
+      ne_idx = nw_idx + se_idx;
+      high_bias = true;
+    }
+  } else if (points.size() % 4) {
+    se_idx = points.size() / 2; 
+    if(high_bias) {
+      nw_idx = points.size() / 4;
+      ne_idx = nw_idx + se_idx;
+      high_bias = false;
+    } else {
+      nw_idx = (points.size() / 4) + 1;
+      ne_idx = nw_idx + se_idx;
+      high_bias = true;
+    }
+  } else { //evenly divisble by both 2, 4; no adjustment needed
+    nw_idx = points.size() / 4;
+    se_idx = points.size() / 2; 
+    ne_idx = nw_idx + se_idx;
+  }
+
+  assert(nw_idx > 0 && se_idx > nw_idx && ne_idx > se_idx);
+
+  double h_width = grid_width / 2;
+  double q_width = grid_width / 4;
+
+  Vertex v_pin;
+  //build a virtual pin at the SW sub-quadrant
+  v_pin.v_id = ++vp_idx;
+  v_pin.fixed = true;
+  v_pin.v_pin = true;
+  v_pin.x_pos = grid_zero_pos.first + q_width;
+  v_pin.y_pos = grid_zero_pos.second + q_width;
+  unsigned int cell_idx;
+  for(unsigned int i = 0; i < nw_idx; ++i)
+  {
+     cell_idx = std::get<0>(points.at(i)) - 1;
+     assert(cell_idx < cells.size() && cell_idx >= 0);
+     v_pin.addEdge(vp_idx, &cells[cell_idx], v_pin_weight);
+  }
+  virtual_pins.push_back(v_pin);
+  v_pin.adj_list = std::list<Edge>();
+
+  //build a virtual pin at the NW sub-quadrant
+  v_pin.v_id = ++vp_idx;
+  v_pin.y_pos += h_width;
+  for(unsigned int i = nw_idx; i < se_idx; ++i)
+  {
+     cell_idx = std::get<0>(points.at(i)) - 1;
+     assert(cell_idx < cells.size() && cell_idx >= 0);
+     v_pin.addEdge(vp_idx, &cells[cell_idx], v_pin_weight);
+  }
+  virtual_pins.push_back(v_pin);
+  v_pin.adj_list = std::list<Edge>();
+
+  //build a virtual pin at the SE sub-quadrant
+  v_pin.v_id = ++vp_idx;
+  v_pin.x_pos += h_width;
+  v_pin.y_pos = grid_zero_pos.second + q_width;
+  for(unsigned int i = se_idx; i < ne_idx; ++i)
+  {
+     cell_idx = std::get<0>(points.at(i)) - 1;
+     assert(cell_idx < cells.size() && cell_idx >= 0);
+     v_pin.addEdge(vp_idx, &cells[cell_idx], v_pin_weight);
+  }
+  virtual_pins.push_back(v_pin);
+  v_pin.adj_list = std::list<Edge>();
+
+  //build a virtual pin at the NE sub-quadrant
+  v_pin.v_id = ++vp_idx;
+  v_pin.y_pos += h_width;
+  for(unsigned int i = ne_idx; i < points.size(); ++i)
+  {
+     cell_idx = std::get<0>(points.at(i)) - 1;
+     assert(cell_idx < cells.size() && cell_idx >= 0);
+     v_pin.addEdge(vp_idx, &cells[cell_idx], v_pin_weight);
+  }
+  virtual_pins.push_back(v_pin);
+}
+
 
 void swapIOPair(Vertex * io_cells, unsigned int f_dim)
 {
@@ -320,6 +459,7 @@ void buildQ(int f_pin_cnt)
    using namespace std;
    int m_dim = cells.size() - f_pin_cnt;
    Q.resize(m_dim);
+   std::vector<double> diag_entries;
    diag_entries.resize(m_dim);
 
    //iterate over movable cells, generate non-diagonal entries of Q
@@ -387,17 +527,24 @@ void buildQ(int f_pin_cnt)
    }
 
    //check that Q matrix is symmetrical
-   for (int r=0; r<m_dim; ++r)
+   assertQSymmetry(true);
+}
+
+void assertQSymmetry(bool print)
+{
+   using namespace std;
+   //check that Q matrix is symmetrical
+   for (unsigned int r=0; r<Q.size(); ++r)
    {
-     cout << "Row " << r << ": ";
-     for(int c=0; c<m_dim; ++c)
+     if(print) cout << "Row " << r << ": ";
+     for(unsigned int c=0; c<Q.size(); ++c)
      {
          assert(Q[r][c] == Q[c][r]);
-
          if(!(Q[c][r] < 0))
-            cout << " ";
-         cout << Q[c][r] << " ";
+           if(print) cout << " ";
+         if(print) cout << Q[c][r] << " ";
      }
-     cout << "\n";
+     if(print) cout << "\n";
    }
+
 }

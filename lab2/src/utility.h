@@ -2,6 +2,7 @@
 #define _UTILITY_H_
 
 #include <vector>
+#include <tuple>
 #include <list>
 #include <string>
 #include <thread>
@@ -55,7 +56,8 @@ namespace std {
 }
 
 //analytical placement related
-std::vector<double> solveQ(std::vector<std::vector<double>>const &, std::vector<Vertex> const &);
+std::vector<double> solveQ(std::vector<std::vector<double>>const &, std::vector<Vertex> const &, std::vector<Vertex> const *);
+void                partition_quadrants(std::vector<std::tuple<int, double, double>> & );
 
 //graphics related
 void begin_graphics (void);

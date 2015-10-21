@@ -15,6 +15,7 @@ struct Vertex
   double x_pos; 
   double y_pos; 
   bool fixed; 
+  bool v_pin; 
   std::list<Edge> adj_list;
 
   Vertex();

@@ -1,6 +1,18 @@
 #include "utility.h"
 
-std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::vector<Vertex> const & fixed_cells)
+struct sort_by_x {
+    bool operator()(const std::tuple<int,double,double> &left, const std::tuple<int,double,double> &right) {
+        return std::get<1>(left) < std::get<1>(right);
+    }
+};
+
+struct sort_by_y {
+    bool operator()(const std::tuple<int,double,double> &left, const std::tuple<int,double,double> &right) {
+        return std::get<2>(left) < std::get<2>(right);
+    }
+};
+
+std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::vector<Vertex> const & fixed_cells, std::vector<Vertex> const * virtual_cells)
 {
   //assert N x N dim of cols matrix
   assert(cols.size() == cols.at(0).size());
@@ -28,6 +40,23 @@ std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::ve
          By[idx] += (*it).weight * (double)fixed_cells.at(i).y_pos;
       }
   }
+  if (virtual_cells != nullptr)
+  {
+     for (unsigned int i=0; i < (*virtual_cells).size(); ++i)
+     {
+         std::list<Edge> const & adj_cells = (*virtual_cells).at(i).adj_list;
+         for(auto it = adj_cells.begin(); it != adj_cells.end(); ++it)
+         {
+            if ((*it).tgt->fixed)
+              continue;
+            int idx = Vertex::v_map_table.at((*it).tgt->v_id - 1);
+            assert(idx < m_dim && idx >= 0);
+            Bx[idx] += (*it).weight * (double)(*virtual_cells).at(i).x_pos;
+            By[idx] += (*it).weight * (double)(*virtual_cells).at(i).y_pos;
+         }
+     }
+  }
+
 
   //UMFPACK sparse matrix solver arguments
   int *    Ap = new int[m_dim+1];
@@ -63,6 +92,7 @@ std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::ve
     }
   }
 
+#ifdef _DEBUG_
   std::cout << "Bx: ";
   for(int i =0; i<m_dim; ++i)
   {
@@ -93,6 +123,7 @@ std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::ve
     std::cout << Ax[i] << " ";
   }
   std::cout << "\n";
+#endif
 
   double *null = (double *) NULL;
   void   *Symbolic, *Numeric;
@@ -123,6 +154,22 @@ std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::ve
   return retval;
 }
 
+//*****************************************************************************
+//* sort cartesian points (v_id, x_pos, y_pos) across x dim, and then by y dim 
+//* dividing them across 4 quadrants
+//*****************************************************************************
+void partition_quadrants(std::vector<std::tuple<int, double, double>> & points)
+{
+   std::sort(points.begin(), points.end(), sort_by_x());
+
+   auto m_it = points.begin() + (points.size() / 2);
+
+   std::sort(points.begin(), m_it, sort_by_y());
+   std::sort(m_it, points.end(), sort_by_y());
+
+   return;
+}
+
 void begin_graphics (void)
 {
    t_bound_box initial_coords = t_bound_box(0,0,100,100);
@@ -141,22 +188,6 @@ void begin_graphics (void)
 void drawscreen (void)
 {
    clearscreen();
-   //----------------------
-   // Draw Grid Rectangles
-   //----------------------
-   //color_types color_indicies[] = {
-   //   LIGHTGREY,
-   //   DARKGREY,
-   //   WHITE,
-   //   BLACK,
-   //   BLUE,
-   //   GREEN,
-   //   YELLOW,
-   //   CYAN,
-   //   RED,
-   //   DARKGREEN,
-   //   MAGENTA
-   //};
 
    for(auto it = cells.begin(); it != cells.end(); ++it)
    {
@@ -184,6 +215,8 @@ void drawscreen (void)
       q_to_c_map[q_idx++] = i;
    }
 
+   int drawn_lines =0;
+
    //draw lines between movable cells
    for(unsigned int c=0; c<Q.size(); c++)
    {
@@ -195,15 +228,17 @@ void drawscreen (void)
              int tgt_idx = q_to_c_map.at(r);
              drawline(cells[src_idx].x_pos, cells[src_idx].y_pos, 
                       cells[tgt_idx].x_pos, cells[tgt_idx].y_pos);
+             drawn_lines++;
          }
       }
    }
 
    setcolor(RED);
+   setlinestyle(DASHED);
+   setlinewidth(1);
    //used edge set 
    std::unordered_set<std::pair<int, int>> u_edges;
 
-   int drawn_lines =0;
    for(auto f_iter = fixed_cells.begin();  f_iter != fixed_cells.end(); ++f_iter)
    {
      std::list<Edge>& adj_cells = f_iter->adj_list;
