@@ -231,7 +231,7 @@ METIS = ../../metis-4.0/libmetis.a
 # -DNCHOLMOD    do not use CHOLMOD as a ordering method.  If -DNCHOLMOD is
 #               included in UMFPACK_CONFIG, then UMFPACK  does not rely on
 #               CHOLMOD, CAMD, CCOLAMD, COLAMD, and METIS.
-
+#
 #UMFPACK_CONFIG =
 UMFPACK_CONFIG = -DNBLAS
 
