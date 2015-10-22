@@ -1,0 +1,23 @@
+Starting A2 application... 
+Okay: finished parsing the placer input file : cct1
+//------------------------------------------------------------
+// HPWL of placed cells (cell_cnt =10, net_cnt=17)
+//------------------------------------------------------------
+Net 1 HPWL : 100
+Net 2 HPWL : 100
+Net 3 HPWL : 37.3957
+Net 4 HPWL : 32.0534
+Net 5 HPWL : 21.3689
+Net 6 HPWL : 28.2137
+Net 7 HPWL : 50.4174
+Net 8 HPWL : 21.3689
+Net 9 HPWL : 26.7112
+Net 10 HPWL : 28.8815
+Net 11 HPWL : 28.8815
+Net 12 HPWL : 5.34224
+Net 13 HPWL : 8.68114
+Net 14 HPWL : 42.2371
+Net 15 HPWL : 47.4124
+Net 16 HPWL : 52.5876
+Net 17 HPWL : 100
+Total HPWL= 731.553
