@@ -1,6 +1,6 @@
 CC = g++
 #CFLAGS = -g -O0 -c -Wall -std=c++11 
-CFLAGS = -g -O1 -c -Wall -std=c++11 
+CFLAGS = -g -O2 -c -Wall -std=c++11 
 INC=-Iref/SuiteSparse/AMD/Include -Iref/SuiteSparse/UMFPACK/Include -Iref/SuiteSparse/SuiteSparse_config
 
 
@@ -28,7 +28,10 @@ bin:
 
 umfpack: ref/SuiteSparse/UMFPACK/Makefile ref/SuiteSparse/Makefile
 ifeq (,$(wildcard  ./ref/SuiteSparse/UMFPACK/Lib/libumfpack.a))
-	$(MAKE) -C ref/SuiteSparse/UMFPACK
+	$(MAKE) -C ref/SuiteSparse/ library
+endif
+ifeq (,$(wildcard  ./ref/SuiteSparse/AMD/Lib/libamd.a))
+	$(MAKE) -C ref/SuiteSparse/ library
 endif
 
 bin/%.o : src/%.cpp
