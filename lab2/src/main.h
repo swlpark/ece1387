@@ -33,8 +33,10 @@ void                swapIOPair(Vertex*, unsigned int);
 void                displayHPWL(std::vector<double> const &);
 void                buildQ(int);
 void                assignCellPos(std::vector<double> const &, int);
-void                recursive_spread(std::vector<std::tuple<int,double,double>> &, double, double, std::pair<double, double>);
-bool                checkOverlapReq();
+bool                recursive_spread(std::vector<std::tuple<int,double,double>> &, double, double, std::pair<double, double>);
+bool                spread_to_zero_bin(std::vector<std::tuple<int,double,double>> &, double, double, std::pair<double, double>);
+bool                checkOverlapReq(int*);
+int                 countEmptyBin(int*, double, double, double);
 void                assertQSymmetry(bool);
 
 #endif

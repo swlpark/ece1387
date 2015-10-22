@@ -223,6 +223,7 @@ void drawscreen (void)
       q_to_c_map[q_idx++] = i;
    }
 
+#ifdef _DEBUG_
    int drawn_lines =0;
    //draw lines between movable cells
    for(unsigned int c=0; c<Q.size(); c++)
@@ -269,5 +270,6 @@ void drawscreen (void)
    }
 
    std::cout << "Number of lines drawn: " << drawn_lines << "\n";
+#endif
 }
 
