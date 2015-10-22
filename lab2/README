@@ -1,0 +1,26 @@
+#build assignment 2
+make
+
+#Q1: print HPWL to stdout
+./ap -i cct1 > q1_cct1
+./ap -i cct2 > q1_cct2
+./ap -i cct3 > q1_cct3
+
+#Q2: perform I/O cells swaps on cct2
+./ap -c -i cct2 > q2_cct2
+
+#Q3: perform a single pass, 4-way cell spreading, using "artificial" fixed blocks
+./ap -s -i cct1 
+./ap -s -i cct2
+./ap -s -i cct3
+
+#Optional: can speicify custom starting weight of virtual pins to observe its effects on graphics window
+./ap -s -w 4 -i cct2
+
+#Q4: perform a single pass, 4-way cell spreading, using "artificial" fixed blocks
+./ap -r -i cct2
+./ap -r -i cct3
+
+#Optional: verbose graphics mode option -v, allows to see intermediate spreading results;
+./ap -v -r -i cct2
+./ap -v -r -i cct3

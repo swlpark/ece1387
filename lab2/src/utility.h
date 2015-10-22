@@ -60,8 +60,10 @@ std::vector<double> solveQ(std::vector<std::vector<double>>const &, std::vector<
 void                partition_quadrants(std::vector<std::tuple<int, double, double>> & );
 
 //graphics related
-void begin_graphics (void);
-void drawscreen     (void);
+void begin_graphics            (void);
+void drawscreen                (void);
+void step_graphis              (double, int);
+void act_on_toggle_nets_button (void (*drawscreen_ptr) (void));
 
 #endif
 

@@ -40,6 +40,7 @@ std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::ve
          By[idx] += (*it).weight * (double)fixed_cells.at(i).y_pos;
       }
   }
+  //add weight contributions from virtual pins
   if (virtual_cells != nullptr)
   {
      for (unsigned int i=0; i < (*virtual_cells).size(); ++i)
@@ -56,7 +57,6 @@ std::vector<double> solveQ(std::vector<std::vector<double>> const &cols, std::ve
          }
      }
   }
-
 
   //UMFPACK sparse matrix solver arguments
   int *    Ap = new int[m_dim+1];
@@ -170,23 +170,51 @@ void partition_quadrants(std::vector<std::tuple<int, double, double>> & points)
    return;
 }
 
+static bool show_nets = true;
+static bool created_button = false;
+void step_graphis (double overlap_ratio, int spread_cnt)
+{
+   t_bound_box initial_coords = t_bound_box(0,0,100,100);
+
+   init_graphics("Analytical Placer - verbose mode", WHITE);
+   set_visible_world(initial_coords);
+
+   std::ostringstream str_buf;
+   str_buf  << "Did recursive spreading " << spread_cnt << " times; overlap ratio = " << overlap_ratio;
+   std::string disp_str = str_buf.str();
+   update_message(disp_str);
+
+   if(!created_button) {
+     create_button ("Window", "Toggle Lines", act_on_toggle_nets_button); // name is UTF-8
+     created_button = true;
+   }
+   drawscreen();
+   event_loop(NULL, NULL, NULL, drawscreen);   
+}
+
 void begin_graphics (void)
 {
    t_bound_box initial_coords = t_bound_box(0,0,100,100);
 
-   init_graphics("Analytical Placer", WHITE);
+   init_graphics("Analytical Placer - Final View", WHITE);
    set_visible_world(initial_coords);
 
    std::ostringstream str_buf;
    str_buf << cells.size() << " cells placed with " << nets.size() << " nets";
    std::string disp_str = str_buf.str();
    update_message(disp_str);
+
+   if(!created_button) {
+     create_button ("Window", "Toggle Lines", act_on_toggle_nets_button); // name is UTF-8
+     created_button = true;
+   }
    event_loop(NULL, NULL, NULL, drawscreen);   
-   //t_bound_box old_coords = get_visible_world();
+   //t_bound_box old_coords = get_visible_world(); //save the current view for later
 }
 
 void drawscreen (void)
 {
+   set_draw_mode(DRAW_NORMAL);
    clearscreen();
 
    for(auto it = cells.begin(); it != cells.end(); ++it)
@@ -200,6 +228,7 @@ void drawscreen (void)
       fillrect(cell_rect);
    }
 
+#ifdef _DEBUG_
    setcolor(BLACK);
    for(auto it = virtual_pins.begin(); it != virtual_pins.end(); ++it)
    {
@@ -207,6 +236,7 @@ void drawscreen (void)
       t_bound_box cell_rect = t_bound_box(bt_marker, 0.6, 0.6);
       fillrect(cell_rect);
    }
+#endif
 
    setcolor(MEDIUMPURPLE);
    setlinestyle(SOLID);
@@ -223,53 +253,60 @@ void drawscreen (void)
       q_to_c_map[q_idx++] = i;
    }
 
-#ifdef _DEBUG_
-   int drawn_lines =0;
-   //draw lines between movable cells
-   for(unsigned int c=0; c<Q.size(); c++)
+   if (show_nets)
    {
-      for(unsigned int r=c+1; r<Q.size(); r++)
+      int drawn_lines =0;
+      //draw lines between movable cells
+      for(unsigned int c=0; c<Q.size(); c++)
       {
-         if (Q[c][r] != 0)
+         for(unsigned int r=c+1; r<Q.size(); r++)
          {
-             int src_idx = q_to_c_map.at(c);
-             int tgt_idx = q_to_c_map.at(r);
-             drawline(cells[src_idx].x_pos, cells[src_idx].y_pos, 
-                      cells[tgt_idx].x_pos, cells[tgt_idx].y_pos);
-             drawn_lines++;
+            if (Q[c][r] != 0)
+            {
+                int src_idx = q_to_c_map.at(c);
+                int tgt_idx = q_to_c_map.at(r);
+                drawline(cells[src_idx].x_pos, cells[src_idx].y_pos, 
+                         cells[tgt_idx].x_pos, cells[tgt_idx].y_pos);
+                drawn_lines++;
+            }
          }
+      }
+      setcolor(RED);
+      setlinestyle(DASHED);
+      setlinewidth(1);
+      //used edge set to filter 
+      std::unordered_set<std::pair<int, int>> u_edges;
+      for(auto f_iter = fixed_cells.begin();  f_iter != fixed_cells.end(); ++f_iter)
+      {
+        std::list<Edge>& adj_cells = f_iter->adj_list;
+
+        //iterating over the edge list to draw
+        for(auto t_iter = adj_cells.begin(); t_iter != adj_cells.end(); ++t_iter)
+        {
+           std::pair<int, int> edge (f_iter->v_id, t_iter->tgt->v_id);
+           auto set_idx = u_edges.find(edge);
+
+           //skip if edge is found in the set
+           if (set_idx != u_edges.end()) {
+              continue;
+           }
+           u_edges.insert(edge);
+           drawline(f_iter->x_pos, f_iter->y_pos, 
+                    t_iter->tgt->x_pos, t_iter->tgt->y_pos);
+           drawn_lines++;
+        }
       }
    }
 
-   setcolor(RED);
-   setlinestyle(DASHED);
-   setlinewidth(1);
-   //used edge set 
-   std::unordered_set<std::pair<int, int>> u_edges;
-
-   for(auto f_iter = fixed_cells.begin();  f_iter != fixed_cells.end(); ++f_iter)
-   {
-     std::list<Edge>& adj_cells = f_iter->adj_list;
-
-     //iterating over the edge list to draw
-     for(auto t_iter = adj_cells.begin(); t_iter != adj_cells.end(); ++t_iter)
-     {
-        std::pair<int, int> edge (f_iter->v_id, t_iter->tgt->v_id);
-        auto set_idx = u_edges.find(edge);
-
-        //skip if edge is found in the set
-        if (set_idx != u_edges.end()) {
-           //std::cout << "DEBUG: set found a duplicate edge, src_cell=" << f_iter->v_id  <<"\n";
-           continue;
-        }
-        u_edges.insert(edge);
-        drawline(f_iter->x_pos, f_iter->y_pos, 
-                 t_iter->tgt->x_pos, t_iter->tgt->y_pos);
-        drawn_lines++;
-     }
-   }
-
+#ifdef _DEBUG_
    std::cout << "Number of lines drawn: " << drawn_lines << "\n";
 #endif
 }
+
+void act_on_toggle_nets_button (void (*drawscreen_ptr) (void)) {
+     show_nets = (show_nets) ? false : true;
+     // Re-draw the screen (a few squares are changing colour with time)
+     drawscreen_ptr();  
+}
+
 

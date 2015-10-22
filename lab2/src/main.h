@@ -27,15 +27,16 @@ extern std::vector<double>              edge_weights;
 extern std::vector<std::vector<double>> Q;
 extern std::vector<double>              diag_entries;
 extern std::vector<Vertex>              virtual_pins;
+extern int                              vp_idx;
 
 std::vector<double> computeHPWL();
 void                swapIOPair(Vertex*, unsigned int);
 void                displayHPWL(std::vector<double> const &);
 void                buildQ(int);
 void                assignCellPos(std::vector<double> const &, int);
-bool                recursive_spread(std::vector<std::tuple<int,double,double>> &, double, double, std::pair<double, double>);
-bool                spread_to_zero_bin(std::vector<std::tuple<int,double,double>> &, double, double, std::pair<double, double>);
-bool                checkOverlapReq(int*);
+double              recursive_spread(std::vector<std::tuple<int,double,double>> &, double, double, std::pair<double, double>, bool, bool);
+double              spread_to_zero_bin(std::vector<std::tuple<int,double,double>> &, double, double, std::pair<double, double>, bool);
+double              computeOverlap(int*);
 int                 countEmptyBin(int*, double, double, double);
 void                assertQSymmetry(bool);
 
