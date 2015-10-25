@@ -15,7 +15,6 @@ std::vector<Vertex>                 virtual_pins;
 std::vector<std::vector<double>>    Q;
 
 //vp_idx, virtual pin id number (1 2 3 4 ...)
-//also represents number of spread performed to meet overlap <= 0.15
 int vp_idx=0;
 
 bool compVertex (Vertex const& lhs, Vertex const& rhs) {
@@ -212,7 +211,7 @@ int main(int argc, char *argv[]) {
       std::cout << "// Recursive spreading results (option -s)\n";
       std::cout << "//------------------------------------------------------------\n";
       std::cout << "Overlap ratio on 100x100 grid: " << overlap_ratio << "\n";
-      std::cout << "Number of recursive spreading perfomed : " << vp_idx << "\n";
+      std::cout << "Number of virtual pins added: " << vp_idx << "\n";
    }
 
    //A2:Q2, SWAP experiments

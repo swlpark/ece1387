@@ -21,6 +21,6 @@ make
 ./ap -r -i cct2
 ./ap -r -i cct3
 
-#Optional: verbose graphics mode option -v, allows to see intermediate spreading results;
+#Optional: verbose graphics mode option -v, allows to see intermediate spreading results; useful for Q4
 ./ap -v -r -i cct2
 ./ap -v -r -i cct3

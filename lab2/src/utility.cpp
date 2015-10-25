@@ -172,7 +172,7 @@ void partition_quadrants(std::vector<std::tuple<int, double, double>> & points)
 
 static bool show_nets = true;
 static bool created_button = false;
-void step_graphis (double overlap_ratio, int spread_cnt)
+void step_graphis (double overlap_ratio, int vpin_cnt)
 {
    t_bound_box initial_coords = t_bound_box(0,0,100,100);
 
@@ -180,7 +180,7 @@ void step_graphis (double overlap_ratio, int spread_cnt)
    set_visible_world(initial_coords);
 
    std::ostringstream str_buf;
-   str_buf  << "Did recursive spreading " << spread_cnt << " times; overlap ratio = " << overlap_ratio;
+   str_buf  << "Added " << vpin_cnt << " virtual pins; overlap ratio = " << overlap_ratio;
    std::string disp_str = str_buf.str();
    update_message(disp_str);
 
