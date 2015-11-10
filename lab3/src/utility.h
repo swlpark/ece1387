@@ -1,6 +1,5 @@
 #ifndef _UTILITY_H_
 #define _UTILITY_H_
-
 #include <vector>
 #include <tuple>
 #include <list>
@@ -8,11 +7,11 @@
 #include <thread>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <iterator>
 #include <utility>
 #include <unordered_set>
 #include "graph.h"
-#include "umfpack.h"
 #include "graphics.h"
 #include "main.h"
 
@@ -55,15 +54,9 @@ namespace std {
   };
 }
 
-//analytical placement related
-std::vector<double> solveQ(std::vector<std::vector<double>>const &, std::vector<Vertex> const &, std::vector<Vertex> const *);
-void                partition_quadrants(std::vector<std::tuple<int, double, double>> & );
-
 //graphics related
 void begin_graphics            (void);
-void drawscreen                (void);
-void step_graphis              (double, int);
-void act_on_toggle_nets_button (void (*drawscreen_ptr) (void));
+void parse_test_file           (std::string);
 
 #endif
 

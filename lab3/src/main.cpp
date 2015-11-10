@@ -1,22 +1,15 @@
 #include "main.h"
 
-//cells, a vector of both movable and fixed I/O cells
-std::vector<Vertex>                 vertices; 
-//nets, nets connecting cells as described in the input file
-std::vector<std::vector<int>>       nets; 
-
-//edge_weights, clique-model weights assoicated with each net
-std::vector<double>                 edge_weights;
+//a vector of graph vertices
+std::vector<Graph> vertices; 
+Tree               root;
 
 int main(int argc, char *argv[]) {
    using namespace std;
 
    string   f_name;
-   ifstream in_file;
-
    char arg;
    cout << "Starting A3 application... \n" ;
-
    while ((arg = getopt (argc, argv, "i:")) != -1) {
       switch (arg) {
          case 'i': 
@@ -25,76 +18,42 @@ int main(int argc, char *argv[]) {
       }
    }
 
-   in_file.open(f_name);
-   if (!in_file.is_open()) {
-      cerr << "Cannot open file - " << f_name << "; please check file exists\n";
-      exit(EXIT_FAILURE);
-   }
+   //generate vertices & nets from the input file
+   parse_test_file(f_name);
 
-   //**************************************************************************
-   //* Start of file I/O: parse input file as a stream
-   //**************************************************************************
-   string line;
-   bool mark_io = false;
-   bool sorted  = false;
-
-   while(getline(in_file,line))
+   //add nets to each vertex
+   for(unsigned int i=0; i < Graph::nets.size(); ++i)
    {
-      istringstream iss(line);
-      int value;
-      if (!(iss >> value)) {
-         cerr << "I/O Error: A input line does not start with an int... exiting...\n";
-         exit(EXIT_FAILURE);
-      }
-      else
+      for(unsigned int j=0; j<Graph::nets[i].size(); ++j)
       {
-         vector<int> line_data;
-         line_data.push_back(value);
-         while(iss >> value) {
-           line_data.push_back(value);
-         }
-
-         if (line_data.size() == 0)
-            continue;
-
-         //lines terminating with -1
-         if(*(--line_data.end()) == -1)
-         {
-            if (line_data.size() > 1)
-            {
-              Vertex c; 
-              c.v_id = line_data.at(0);
-              cells.push_back(c);
-     
-              for(unsigned int i=1; i<line_data.size(); ++i)
-              {
-                int e = line_data.at(i);
-                if (e == -1) break;
-                while ((int)nets.size() < e) {
-                   nets.push_back(vector<int>());
-                }
-
-                nets[e-1].push_back(c.v_id);
-              }
-            } else { //-1 line
-              mark_io = true;
-              continue;
-            }
-         }
-         else //fixed cell line(s)
-         {
-            cout << "Invalid file input\n";
-         }
+        int v_idx = Graph::nets[i][j] - 1;
+        int net_id = i+1;
+        vertices[v_idx].addEdge(net_id);
       }
    }
-   if (in_file.bad()) {
-      cerr << "I/O Error: There was a problem(s) with reading the file - " << f_name << "\n"; 
-      exit(EXIT_FAILURE);
+#ifdef _DEBUG_
+   for(auto i = vertices.begin(); i != vertices.end(); ++i)
+   {
+      (*i).printVertex();
    }
-   in_file.close();
-   cout << "Okay: finished parsing the input file : " << f_name << "\n"; 
+#endif
 
-   begin_graphics();
+   //even number of vertices
+   assert((vertices.size() % 2) == 0);
+
+   //set-up root node, and decide vertices order
+   Tree::u_set_size = vertices.size() >> 1;
+   root.partition.resize(vertices.size());
+   root.edge_table.resize(Graph::nets.size());
+   Tree::set_partition_order(vertices);
+
+   //choose an arbitary solution
+   std::vector<Partition> init_sol(vertices.size(), Partition::R_ASSIGNED);
+   for(int i=0; i < Tree::u_set_size; ++i)
+   {
+     init_sol[i] = Partition::L_ASSIGNED; 
+   }
+   Tree::u_cut_size = Tree::calc_solution_cut(init_sol);
 }
 
 

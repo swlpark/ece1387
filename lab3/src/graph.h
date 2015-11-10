@@ -2,37 +2,23 @@
 #define _GRAPH_H_
 
 #include <list>
+#include <vector>
 #include <iterator>
 #include <iostream>
 #include <algorithm>
 #include <cassert>
 
-struct Edge;
-
-struct Vertex
+struct Graph
 {
-  int    v_id; 
-  double x_pos; 
-  double y_pos; 
-  bool fixed; 
-  bool v_pin; 
-  std::list<Edge> adj_list;
+  int              v_id; 
+  bool             assigned; 
+  std::vector<int> adj_nets;
 
-  Vertex();
-  void addEdge(int, Vertex *, float);
+  Graph();
+  void addEdge(int);
   void printVertex();
 
-  //maps v to a slot in Q matrix 
-  static std::vector<int> v_map_table;
-};
-
-struct Edge
-{
-  int e_id;
-  Vertex * tgt;
-  double weight;
-
-  bool operator==(const Edge &rhs);
+  static std::vector<std::vector<int>> nets;
 };
 
 #endif
