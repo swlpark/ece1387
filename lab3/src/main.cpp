@@ -54,6 +54,18 @@ int main(int argc, char *argv[]) {
      init_sol[i] = Partition::L_ASSIGNED; 
    }
    Tree::u_cut_size = Tree::calc_solution_cut(init_sol);
+
+   branch_and_bound(&root);
+}
+
+void branch_and_bound(Tree * a_node)
+{
+   Tree *l_node = current_node->branchLeft();
+   Tree *r_node = current_node->branchRight();
+   if ()
+   l_node->printNode();
+   r_node->printNode();
+
 }
 
 
