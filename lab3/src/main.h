@@ -22,6 +22,6 @@
 #include "utility.h"
 
 extern std::vector<Graph> vertices; 
-void branch_and_bound(Tree*);
+Tree* branch_and_bound(Tree*);
 
 #endif

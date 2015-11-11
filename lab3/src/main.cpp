@@ -37,7 +37,6 @@ int main(int argc, char *argv[]) {
       (*i).printVertex();
    }
 #endif
-
    //even number of vertices
    assert((vertices.size() % 2) == 0);
 
@@ -58,13 +57,30 @@ int main(int argc, char *argv[]) {
    branch_and_bound(&root);
 }
 
-void branch_and_bound(Tree * a_node)
+Tree* branch_and_bound(Tree * a_node)
 {
-   Tree *l_node = current_node->branchLeft();
-   Tree *r_node = current_node->branchRight();
-   if ()
-   l_node->printNode();
-   r_node->printNode();
+   Tree *l_node = a_node->branchLeft();
+   Tree *r_node = a_node->branchRight();
+   Tree* r_recurse;
+   Tree* l_recurse;
+
+   if (r_node->cut_size < l_node->cut_size) {
+     //prune if current cut_size (i.e. LB)
+     if (r_node->getLowerBound() >= Tree::u_cut_size) {
+       return nullptr;
+     } else if (r_node->isLeaf()) {
+       if (r_node->cut_size < Tree::u_cut_size) {
+          r_node->printNode();
+          Tree::u_cut_size = r_node->cut_size;
+       }
+       return r_node;
+     }
+     r_recurse = branch_and_bound(r_node);
+     l_recurse = branch_and_bound(1_node);
+   } else {
+     branch_and_bound(l_node);
+     branch_and_bound(r_node);
+   }
 
 }
 
