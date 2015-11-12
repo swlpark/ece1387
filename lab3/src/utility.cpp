@@ -1,11 +1,5 @@
 #include "utility.h"
 
-struct sort_vertices {
-    bool operator()(const std::tuple<int,double,double> &left, const std::tuple<int,double,double> &right) {
-        return std::get<2>(left) < std::get<2>(right);
-    }
-};
-
 //*****************************************************************************
 //* sort cartesian points (v_id, x_pos, y_pos) across x dim, and then by y dim 
 //* dividing them across 4 quadrants
@@ -59,7 +53,7 @@ void parse_test_file(std::string f_name)
             {
               Graph c; 
               c.v_id = line_data.at(0);
-              vertices.push_back(c);
+              Graph::vertices.push_back(c);
      
               for(unsigned int i=1; i<line_data.size(); ++i)
               {

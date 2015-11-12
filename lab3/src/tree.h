@@ -60,5 +60,4 @@ struct Tree
   static int calc_solution_cut(std::vector<Partition>);
 
 };
-
 #endif

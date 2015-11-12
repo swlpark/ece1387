@@ -1,8 +1,7 @@
 #include "main.h"
 
-//a vector of graph vertices
-std::vector<Graph> vertices; 
-Tree               root;
+Tree* branch_and_bound(Tree*);
+Tree  root;
 
 int main(int argc, char *argv[]) {
    using namespace std;
@@ -28,26 +27,26 @@ int main(int argc, char *argv[]) {
       {
         int v_idx = Graph::nets[i][j] - 1;
         int net_id = i+1;
-        vertices[v_idx].addEdge(net_id);
+        Graph::vertices[v_idx].addEdge(net_id);
       }
    }
 #ifdef _DEBUG_
-   for(auto i = vertices.begin(); i != vertices.end(); ++i)
+   for(auto i = Graph::vertices.begin(); i != Graph::vertices.end(); ++i)
    {
       (*i).printVertex();
    }
 #endif
    //even number of vertices
-   assert((vertices.size() % 2) == 0);
+   assert((Graph::vertices.size() % 2) == 0);
 
    //set-up root node, and decide vertices order
-   Tree::u_set_size = vertices.size() >> 1;
-   root.partition.resize(vertices.size());
+   Tree::u_set_size = Graph::vertices.size() >> 1;
+   root.partition.resize(Graph::vertices.size());
    root.edge_table.resize(Graph::nets.size());
-   Tree::set_partition_order(vertices);
+   Tree::set_partition_order(Graph::vertices);
 
    //choose an arbitary solution
-   std::vector<Partition> init_sol(vertices.size(), Partition::R_ASSIGNED);
+   std::vector<Partition> init_sol(Graph::vertices.size(), Partition::R_ASSIGNED);
    for(int i=0; i < Tree::u_set_size; ++i)
    {
      init_sol[i] = Partition::L_ASSIGNED; 
@@ -57,31 +56,55 @@ int main(int argc, char *argv[]) {
    branch_and_bound(&root);
 }
 
+//recursive
 Tree* branch_and_bound(Tree * a_node)
 {
-   Tree *l_node = a_node->branchLeft();
-   Tree *r_node = a_node->branchRight();
-   Tree* r_recurse;
-   Tree* l_recurse;
-
-   if (r_node->cut_size < l_node->cut_size) {
-     //prune if current cut_size (i.e. LB)
-     if (r_node->getLowerBound() >= Tree::u_cut_size) {
-       return nullptr;
-     } else if (r_node->isLeaf()) {
-       if (r_node->cut_size < Tree::u_cut_size) {
-          r_node->printNode();
-          Tree::u_cut_size = r_node->cut_size;
-       }
-       return r_node;
+   Tree *retval = nullptr;
+   Tree *l_node;
+   Tree *r_node;
+   if (a_node->isLeaf()) {
+     if (a_node->cut_size < Tree::u_cut_size) {
+        a_node->printNode();
+        Tree::u_cut_size = a_node->cut_size;
+        retval = a_node;
      }
-     r_recurse = branch_and_bound(r_node);
-     l_recurse = branch_and_bound(1_node);
-   } else {
-     branch_and_bound(l_node);
-     branch_and_bound(r_node);
-   }
+   } else if (a_node->R_size == Tree::u_set_size) {
 
+   } else if (a_node->L_size == Tree::u_set_size) {
+
+   } else {
+     Tree *r_recurse;
+     Tree *l_recurse;
+     l_node = a_node->branchLeft();
+     r_node = a_node->branchRight();
+     //prune if LB is equal or greater than U
+     if (r_node->getLowerBound() < l_node->getLowerBound()) {
+       if (r_node->getLowerBound() >= Tree::u_cut_size) {
+         return nullptr;
+       }
+       r_recurse = branch_and_bound(r_node);
+       l_recurse = branch_and_bound(l_node);
+     } else {
+       if (l_node->getLowerBound() >= Tree::u_cut_size) {
+         return nullptr;
+       }
+       l_recurse = branch_and_bound(l_node);
+       r_recurse = branch_and_bound(r_node);
+     }
+
+     if (l_recurse != nullptr && r_recurse != nullptr) {
+        if (r_recurse->cut_size < l_recurse-> cut_size)
+            retval = r_recurse;
+        else 
+            retval = l_recurse;
+     } else if (l_recurse == nullptr) {
+       retval = r_recurse;
+     } else if (r_recurse == nullptr) {
+       retval = l_recurse;
+     }
+
+   }
+   return retval;
 }
 
 

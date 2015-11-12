@@ -1,5 +1,6 @@
 #include "graph.h"
 
+std::vector<Graph> Graph::vertices;
 std::vector<std::vector<int>> Graph::nets;
 
 Graph::Graph() : v_id(0), assigned(false), adj_nets()

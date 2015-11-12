@@ -33,9 +33,9 @@ int Tree::getLowerBound()
 
 Tree* Tree::branchLeft()
 {
-  assert (node_idx < partition.size());
+  assert (node_idx < (int)partition.size());
   //Leaf node
-  if (node_idx == (partition.size() - 1))
+  if (node_idx == ((int)partition.size() - 1))
      return this;
 
   Tree* l_node = new Tree();
@@ -55,7 +55,7 @@ Tree* Tree::branchLeft()
 
   //update cut_size & edge_table accordingly
   int v_idx = p2v_mapping.at(l_node->node_idx) - 1;
-  std::vector<int> & adj_nets = vertices[v_idx].adj_nets;
+  std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
   for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
   {
     int net_idx = (*it) - 1;
@@ -76,9 +76,9 @@ Tree* Tree::branchLeft()
 
 Tree* Tree::branchRight()
 {
-  assert (node_idx < partition.size());
+  assert (node_idx < (int)partition.size());
   //Leaf node
-  if (node_idx == (partition.size() - 1))
+  if (node_idx == ((int)partition.size() - 1))
      return this;
 
   Tree* r_node = new Tree();
@@ -98,7 +98,7 @@ Tree* Tree::branchRight()
 
   //update cut_size & edge_table accordingly
   int v_idx = p2v_mapping.at(r_node->node_idx) - 1;
-  std::vector<int> & adj_nets = vertices[v_idx].adj_nets;
+  std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
   for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
   {
     int net_idx = (*it) - 1;
@@ -168,10 +168,10 @@ void Tree::printNode()
 bool Tree::isLeaf()
 {
   bool retval = false;
-  assert(node_idx < vertices.size());
-  if (node_idx == vertices.size() -1) {
+  assert(node_idx < (int)Graph::vertices.size());
+  if (node_idx == (int)Graph::vertices.size() -1) {
     retval = true; 
-    for(unsigned int i=0; i < vertices.size(); ++i)
+    for(unsigned int i=0; i < Graph::vertices.size(); ++i)
     {
       assert(partition[i] != Partition::FREE && partition[i] != Partition::CUT);
     }
@@ -223,7 +223,7 @@ int Tree::calc_solution_cut(std::vector<Partition> solution)
    {
      assert(solution[i] != Partition::FREE && solution[i] != Partition::CUT);
      int v_idx = p2v_mapping.at(i) - 1;
-     vector<int> & adj_nets = vertices[v_idx].adj_nets;
+     vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
      for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
      {
        int net_idx = (*it) - 1;

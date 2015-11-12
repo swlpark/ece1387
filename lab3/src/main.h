@@ -21,7 +21,5 @@
 #include "tree.h"
 #include "utility.h"
 
-extern std::vector<Graph> vertices; 
-Tree* branch_and_bound(Tree*);
-
+//extern std::vector<Graph> vertices; 
 #endif
