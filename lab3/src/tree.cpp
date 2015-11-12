@@ -40,9 +40,9 @@ Tree* Tree::branchLeft()
 
   Tree* l_node = new Tree();
 
-  l_node->node_idx = this->node_idx + 1;
   l_node->partition = this->partition;
-  l_node->partition[l_node->node_idx] = L_ASSIGNED;
+  l_node->node_idx = this->node_idx;
+  l_node->partition[l_node->node_idx] = Partition::L_ASSIGNED;
   l_node->cut_size = this->cut_size;
   l_node->edge_table = this->edge_table;
 
@@ -70,6 +70,7 @@ Tree* Tree::branchLeft()
     }
   }
 
+  l_node->node_idx += 1;
   this->left_node = l_node;
   return l_node;
 }
@@ -83,9 +84,9 @@ Tree* Tree::branchRight()
 
   Tree* r_node = new Tree();
 
-  r_node->node_idx = this->node_idx + 1;
   r_node->partition = this->partition;
-  r_node->partition[r_node->node_idx] = R_ASSIGNED;
+  r_node->node_idx = this->node_idx;
+  r_node->partition[r_node->node_idx] = Partition::R_ASSIGNED;
   r_node->cut_size = this->cut_size;
   r_node->edge_table = this->edge_table;
 
@@ -113,9 +114,110 @@ Tree* Tree::branchRight()
     }
   }
 
+  r_node->node_idx += 1;
   this->right_node = r_node;
   return r_node;
 }
+
+Tree* Tree::fillLeft()
+{
+  int fill_size = u_set_size - L_size; 
+  Tree* l_node = new Tree();
+  l_node->node_idx = this->node_idx;
+  l_node->partition = this->partition;
+  l_node->cut_size = this->cut_size;
+  l_node->edge_table = this->edge_table;
+  l_node->L_size = this->L_size;
+  l_node->R_size = this->R_size;
+
+  //Assign free vertices to Left Partition; update edge table
+  for(int i = 0; i < fill_size; ++i) {
+   l_node->partition[l_node->node_idx] = L_ASSIGNED;
+   l_node->L_size += 1;
+
+   int v_idx = p2v_mapping.at(l_node->node_idx) - 1;
+   std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
+   for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
+   {
+     int net_idx = (*it) - 1;
+     switch (l_node->edge_table[net_idx].cut_state)
+     {
+       case Partition::FREE: 
+          l_node->edge_table[net_idx].cut_state = Partition::L_ASSIGNED;
+          break;
+       case Partition::L_ASSIGNED:
+          //no-op
+          break;
+       case Partition::R_ASSIGNED:
+          l_node->edge_table[net_idx].cut_state = Partition::CUT;
+          l_node->cut_size += 1;
+          break;
+       case Partition::CUT:
+          break;
+     }
+   }
+   l_node->node_idx += 1;
+  }
+  //l_node->L_size = this->L_size + fill_size;
+  //l_node->node_idx += fill_size;
+
+  //balance constraint
+  assert(l_node->L_size == u_set_size);
+  assert(l_node->R_size == u_set_size);
+  assert (l_node->node_idx == (int)partition.size());
+  return l_node;
+}
+
+Tree* Tree::fillRight()
+{
+  int fill_size = u_set_size - R_size; 
+  Tree* r_node = new Tree();
+  r_node->node_idx = this->node_idx;
+  r_node->partition = this->partition;
+  r_node->cut_size = this->cut_size;
+  r_node->edge_table = this->edge_table;
+  r_node->L_size = this->L_size;
+  r_node->R_size = this->R_size;
+
+  //Assign free vertices to Left Partition; update edge table
+  for(int i = 0; i < fill_size; ++i) {
+   r_node->partition[r_node->node_idx] = R_ASSIGNED;
+   r_node->R_size += 1;
+
+   int v_idx = p2v_mapping.at(r_node->node_idx) - 1;
+   std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
+   for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
+   {
+     int net_idx = (*it) - 1;
+     switch (r_node->edge_table[net_idx].cut_state)
+     {
+       case Partition::FREE: 
+          r_node->edge_table[net_idx].cut_state = Partition::L_ASSIGNED;
+          break;
+       case Partition::L_ASSIGNED:
+          r_node->edge_table[net_idx].cut_state = Partition::CUT;
+          r_node->cut_size += 1;
+          break;
+       case Partition::R_ASSIGNED:
+          //no-op
+          break;
+       case Partition::CUT:
+          break;
+     }
+   }
+   r_node->node_idx += 1;
+  }
+  //r_node->R_size = this->R_size + fill_size;
+  //r_node->node_idx += fill_size;
+
+  //balance constraint
+  assert(r_node->L_size == u_set_size);
+  assert(r_node->R_size == u_set_size);
+  assert (r_node->node_idx == (int)partition.size());
+  return r_node;
+}
+
+
 
 void Tree::printNode()
 {
@@ -141,7 +243,7 @@ void Tree::printNode()
          assert(false);
          break;
     }
-    cout << "  " << p2v_mapping.at(i);
+    cout << "  ";
   }
   cout << "\nEdge Table:\n"; 
   for(unsigned int i =0; i<edge_table.size(); ++i)
@@ -169,8 +271,10 @@ bool Tree::isLeaf()
 {
   bool retval = false;
   assert(node_idx < (int)Graph::vertices.size());
-  if (node_idx == (int)Graph::vertices.size() -1) {
+  if (node_idx == (int)Graph::vertices.size()) {
     retval = true; 
+    assert(L_size == u_set_size);
+    assert(R_size == u_set_size);
     for(unsigned int i=0; i < Graph::vertices.size(); ++i)
     {
       assert(partition[i] != Partition::FREE && partition[i] != Partition::CUT);
@@ -278,3 +382,5 @@ int Tree::calc_solution_cut(std::vector<Partition> solution)
    assert((unsigned int)retval <= Graph::nets.size());
    return retval;
 }
+
+

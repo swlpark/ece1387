@@ -30,12 +30,12 @@ int main(int argc, char *argv[]) {
         Graph::vertices[v_idx].addEdge(net_id);
       }
    }
-#ifdef _DEBUG_
+//#ifdef _DEBUG_
    for(auto i = Graph::vertices.begin(); i != Graph::vertices.end(); ++i)
    {
       (*i).printVertex();
    }
-#endif
+//#endif
    //even number of vertices
    assert((Graph::vertices.size() % 2) == 0);
 
@@ -63,20 +63,35 @@ Tree* branch_and_bound(Tree * a_node)
    Tree *l_node;
    Tree *r_node;
    if (a_node->isLeaf()) {
-     if (a_node->cut_size < Tree::u_cut_size) {
-        a_node->printNode();
-        Tree::u_cut_size = a_node->cut_size;
-        retval = a_node;
-     }
+     retval = a_node;
+     a_node->printNode();
+     if (a_node->cut_size >= Tree::u_cut_size) {
+        std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
+        retval = nullptr;
+     } else
+        Tree::u_cut_size = retval->cut_size;
    } else if (a_node->R_size == Tree::u_set_size) {
-
+     retval = a_node->fillLeft();
+     retval->printNode();
+     if (retval->cut_size >= Tree::u_cut_size) {
+       std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
+       retval = nullptr; 
+     } else 
+        Tree::u_cut_size = retval->cut_size;
    } else if (a_node->L_size == Tree::u_set_size) {
-
-   } else {
+     retval = a_node->fillRight();
+     retval->printNode();
+     if (retval->cut_size >= Tree::u_cut_size) {
+       std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
+       retval = nullptr; 
+     } else 
+        Tree::u_cut_size = retval->cut_size;
+   } else { //recursive Tree expansion
      Tree *r_recurse;
      Tree *l_recurse;
      l_node = a_node->branchLeft();
      r_node = a_node->branchRight();
+
      //prune if LB is equal or greater than U
      if (r_node->getLowerBound() < l_node->getLowerBound()) {
        if (r_node->getLowerBound() >= Tree::u_cut_size) {
@@ -91,7 +106,6 @@ Tree* branch_and_bound(Tree * a_node)
        l_recurse = branch_and_bound(l_node);
        r_recurse = branch_and_bound(r_node);
      }
-
      if (l_recurse != nullptr && r_recurse != nullptr) {
         if (r_recurse->cut_size < l_recurse-> cut_size)
             retval = r_recurse;
@@ -102,7 +116,6 @@ Tree* branch_and_bound(Tree * a_node)
      } else if (r_recurse == nullptr) {
        retval = l_recurse;
      }
-
    }
    return retval;
 }

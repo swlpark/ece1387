@@ -44,6 +44,10 @@ struct Tree
   Tree* branchLeft();
   Tree* branchRight();
 
+  //expand one side to the Leaf node to meet balance constraint
+  Tree* fillLeft();
+  Tree* fillRight();
+
   //current best solution's cut size
   static int u_cut_size;
   //balance constraint
@@ -58,6 +62,5 @@ struct Tree
 
   //calculate cut-size of a complete solution
   static int calc_solution_cut(std::vector<Partition>);
-
 };
 #endif
