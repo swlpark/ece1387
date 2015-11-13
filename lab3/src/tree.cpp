@@ -29,6 +29,7 @@ Tree::~Tree()
 int Tree::getLowerBound()
 {
   int retval = cut_size;
+
   return retval;
 }
 
@@ -294,33 +295,33 @@ void Tree::set_partition_order(std::vector<Graph> graph)
   }
 }
 
-int Tree::calc_solution_cut(std::vector<Partition> solution)
+int Tree::calc_solution_cut(std::vector<Partition> solution, bool print)
 {
    using namespace std;
    int retval = 0;
    vector<Partition> e_table;
    e_table.resize(Graph::nets.size(), Partition::FREE);
 
-   cout << "Solution Partition:\n"; 
+   if (print) cout << "Solution Partition:\n"; 
    for(unsigned int i =0; i<solution.size(); ++i)
    {
-     cout << "v-" << p2v_mapping.at(i);
+     if (print) cout << "v-" << p2v_mapping.at(i);
      switch (solution[i])
      {
        case Partition::FREE: 
-          cout << ":F";
+          if (print) cout << ":F";
           break;
        case Partition::L_ASSIGNED:
-          cout << ":L";
+          if (print) cout << ":L";
           break;
        case Partition::R_ASSIGNED:
-          cout << ":R";
+          if (print) cout << ":R";
           break;
        case Partition::CUT:
           assert(false);
           break;
      }
-     cout << "  ";
+     if (print) cout << "  ";
    }
 
    //iterate over vertices
@@ -358,28 +359,28 @@ int Tree::calc_solution_cut(std::vector<Partition> solution)
        }
      }
    }
-   cout << "\nSolution edges :\n"; 
+   if (print) cout << "\nSolution edges :\n"; 
    for(unsigned int i =0; i<e_table.size(); ++i)
    {
-     cout << "Net " << i+1;
+     if (print) cout << "Net " << i+1;
      switch (e_table[i])
      {
        case Partition::FREE: 
-          cout << ": FREE\n";
+          if (print) cout << ": FREE\n";
           break;
        case Partition::L_ASSIGNED:
-          cout << ": L_ONLY\n";
+          if (print) cout << ": L_ONLY\n";
           break;
        case Partition::R_ASSIGNED:
-          cout << ": R_ONLY\n";
+          if (print) cout << ": R_ONLY\n";
           break;
        case Partition::CUT:
-          cout << ": CUT\n";
+          if (print) cout << ": CUT\n";
           break;
      }
    }
-   cout << "Solution cut-size: " << retval << "\n"; 
-   cout << "Number of expansions: " << num_expansion << "\n"; 
+   if (print) cout << "Solution cut-size: " << retval << "\n"; 
+   if (print) cout << "Number of expansions: " << num_expansion << "\n"; 
 
    assert((unsigned int)retval <= Graph::nets.size());
    return retval;

@@ -8,11 +8,14 @@ int main(int argc, char *argv[]) {
 
    string   f_name;
    char arg;
+   bool opt_graphics = false;
    cout << "Starting A3 application... \n" ;
-   while ((arg = getopt (argc, argv, "i:")) != -1) {
-      switch (arg) {
+   while ((arg = getopt (argc, argv, "i:g")) != -1) { switch (arg) {
          case 'i': 
             f_name = string(optarg);
+            break;
+         case 'g': 
+            opt_graphics = true;
             break;
       }
    }
@@ -51,11 +54,17 @@ int main(int argc, char *argv[]) {
    {
      init_sol[i] = Partition::L_ASSIGNED; 
    }
-   Tree::u_cut_size = Tree::calc_solution_cut(init_sol);
+   Tree::u_cut_size = Tree::calc_solution_cut(init_sol, false);
 
+   chrono::time_point<chrono::system_clock> start, end;
+   start = chrono::system_clock::now();
    Tree* opt_sol = branch_and_bound(&root);
+   end = chrono::system_clock::now();
+   chrono::duration<double> delta = end - start;
+   cout << "Duration of branch-and-bound partitioning: " << delta.count() << "s\n";
+
    assert(Tree::u_cut_size == opt_sol->cut_size);
-   Tree::calc_solution_cut(opt_sol->partition);
+   Tree::calc_solution_cut(opt_sol->partition, true);
    
 }
 

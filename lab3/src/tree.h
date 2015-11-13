@@ -64,6 +64,6 @@ struct Tree
   static void set_partition_order(std::vector<Graph>);
 
   //calculate cut-size of a complete solution
-  static int calc_solution_cut(std::vector<Partition>);
+  static int calc_solution_cut(std::vector<Partition>, bool);
 };
 #endif
