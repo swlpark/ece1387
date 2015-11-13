@@ -65,5 +65,8 @@ struct Tree
 
   //calculate cut-size of a complete solution
   static int calc_solution_cut(std::vector<Partition>, bool);
+
+  private:
+  int lookahead_LB();
 };
 #endif

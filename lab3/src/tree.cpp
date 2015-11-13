@@ -26,10 +26,65 @@ Tree::~Tree()
     delete right_node;
 }
 
+//lookahead
+int Tree::lookahead_LB()
+{
+  int retval = 0;
+  std::list<int> l_edges;
+  std::list<int> r_edges;
+
+  //mark assigned
+  for(unsigned int i = 0; i < edge_table.size(); ++i)
+  {
+    if(edge_table[i].cut_state == Partition::L_ASSIGNED) {
+      l_edges.push_back(i+1);
+    } else if(edge_table[i].cut_state == Partition::R_ASSIGNED) {
+      r_edges.push_back(i+1);
+    }
+  }
+
+  std::vector<std::vector<int>> hit_table;
+  int row_size = l_edges.size() + r_edges.size();
+
+  //iterate over unassigned vertices
+  for(unsigned int i = node_idx; i < p2v_mapping.size(); ++i)
+  {
+    if(l_edges.size() == 0 || r_edges.size() == 0)
+       break;
+    int l_hit = 0;
+    int r_hit = 0;
+    int v_idx = p2v_mapping.at(i) - 1;
+    std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
+    for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
+    {
+      int net_idx = (*it) - 1;
+      if(edge_table[net_idx].cut_state == Partition::L_ASSIGNED) {
+        auto l_it = std::find(l_edges.begin(), l_edges.end(), (*it));
+        if (l_it != l_edges.end()) {
+          ++l_hit;
+          l_edges.erase(l_it);
+        }
+      } else if(edge_table[net_idx].cut_state == Partition::R_ASSIGNED) {
+        auto r_it = std::find(r_edges.begin(), r_edges.end(), (*it));
+        if (r_it != r_edges.end()) {
+          ++r_hit;
+          r_edges.erase(r_it);
+        }
+      } else {
+        continue;
+      }
+    }
+    if (l_hit > 0 && r_hit > 0) 
+      retval += (l_hit > r_hit) ? r_hit : l_hit;
+  }
+  return retval;
+}
+
 int Tree::getLowerBound()
 {
   int retval = cut_size;
-
+  if (node_idx > 2)
+    retval += lookahead_LB();
   return retval;
 }
 
