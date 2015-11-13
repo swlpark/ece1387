@@ -158,13 +158,12 @@ Tree* Tree::fillLeft()
    }
    l_node->node_idx += 1;
   }
-  //l_node->L_size = this->L_size + fill_size;
-  //l_node->node_idx += fill_size;
 
   //balance constraint
   assert(l_node->L_size == u_set_size);
   assert(l_node->R_size == u_set_size);
   assert (l_node->node_idx == (int)partition.size());
+  this->left_node = l_node;
   return l_node;
 }
 
@@ -207,17 +206,14 @@ Tree* Tree::fillRight()
    }
    r_node->node_idx += 1;
   }
-  //r_node->R_size = this->R_size + fill_size;
-  //r_node->node_idx += fill_size;
 
   //balance constraint
   assert(r_node->L_size == u_set_size);
   assert(r_node->R_size == u_set_size);
   assert (r_node->node_idx == (int)partition.size());
+  this->right_node = r_node;
   return r_node;
 }
-
-
 
 void Tree::printNode()
 {

@@ -53,10 +53,13 @@ int main(int argc, char *argv[]) {
    }
    Tree::u_cut_size = Tree::calc_solution_cut(init_sol);
 
-   branch_and_bound(&root);
+   Tree* opt_sol = branch_and_bound(&root);
+   assert(Tree::u_cut_size == opt_sol->cut_size);
+   Tree::calc_solution_cut(opt_sol->partition);
+   
 }
 
-//recursive
+//recursive B&B
 Tree* branch_and_bound(Tree * a_node)
 {
    Tree *retval = nullptr;
@@ -64,25 +67,37 @@ Tree* branch_and_bound(Tree * a_node)
    Tree *r_node;
    if (a_node->isLeaf()) {
      retval = a_node;
+#ifdef _DEBUG_
      a_node->printNode();
+#endif
      if (a_node->cut_size >= Tree::u_cut_size) {
+#ifdef _DEBUG_
         std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
+#endif
         retval = nullptr;
      } else
         Tree::u_cut_size = retval->cut_size;
    } else if (a_node->R_size == Tree::u_set_size) {
      retval = a_node->fillLeft();
+#ifdef _DEBUG_
      retval->printNode();
+#endif
      if (retval->cut_size >= Tree::u_cut_size) {
+#ifdef _DEBUG_
        std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
+#endif
        retval = nullptr; 
      } else 
         Tree::u_cut_size = retval->cut_size;
    } else if (a_node->L_size == Tree::u_set_size) {
      retval = a_node->fillRight();
+#ifdef _DEBUG_
      retval->printNode();
+#endif
      if (retval->cut_size >= Tree::u_cut_size) {
+#ifdef _DEBUG_
        std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
+#endif
        retval = nullptr; 
      } else 
         Tree::u_cut_size = retval->cut_size;
@@ -95,12 +110,18 @@ Tree* branch_and_bound(Tree * a_node)
      //prune if LB is equal or greater than U
      if (r_node->getLowerBound() < l_node->getLowerBound()) {
        if (r_node->getLowerBound() >= Tree::u_cut_size) {
+#ifdef _DEBUG_
+         std::cout << "Pruning intra-nodes; LB >= U(" << Tree::u_cut_size << ")\n";
+#endif
          return nullptr;
        }
        r_recurse = branch_and_bound(r_node);
        l_recurse = branch_and_bound(l_node);
      } else {
        if (l_node->getLowerBound() >= Tree::u_cut_size) {
+#ifdef _DEBUG_
+         std::cout << "Pruning intra-nodes; LB >= U(" << Tree::u_cut_size << ")\n";
+#endif
          return nullptr;
        }
        l_recurse = branch_and_bound(l_node);
@@ -117,6 +138,7 @@ Tree* branch_and_bound(Tree * a_node)
        retval = l_recurse;
      }
    }
+
    return retval;
 }
 
