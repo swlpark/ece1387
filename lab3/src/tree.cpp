@@ -2,6 +2,7 @@
 
 int              Tree::u_cut_size;
 int              Tree::u_set_size;
+int              Tree::num_expansion;
 std::vector<int> Tree::p2v_mapping;
 
 //higher vertices
@@ -71,6 +72,7 @@ Tree* Tree::branchLeft()
   }
 
   l_node->node_idx += 1;
+  num_expansion++;
   this->left_node = l_node;
   return l_node;
 }
@@ -115,6 +117,7 @@ Tree* Tree::branchRight()
   }
 
   r_node->node_idx += 1;
+  num_expansion++;
   this->right_node = r_node;
   return r_node;
 }
@@ -164,6 +167,7 @@ Tree* Tree::fillLeft()
   assert(l_node->R_size == u_set_size);
   assert (l_node->node_idx == (int)partition.size());
   this->left_node = l_node;
+  num_expansion++;
   return l_node;
 }
 
@@ -212,6 +216,7 @@ Tree* Tree::fillRight()
   assert(r_node->R_size == u_set_size);
   assert (r_node->node_idx == (int)partition.size());
   this->right_node = r_node;
+  num_expansion++;
   return r_node;
 }
 
@@ -374,6 +379,7 @@ int Tree::calc_solution_cut(std::vector<Partition> solution)
      }
    }
    cout << "Solution cut-size: " << retval << "\n"; 
+   cout << "Number of expansions: " << num_expansion << "\n"; 
 
    assert((unsigned int)retval <= Graph::nets.size());
    return retval;

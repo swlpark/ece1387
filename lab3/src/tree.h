@@ -53,6 +53,9 @@ struct Tree
   //balance constraint
   static int u_set_size;
 
+  //balance constraint
+  static int num_expansion;
+
   //maps which vertex is mapped on each partition slot
   //(i.e. sorted vertices, except we only keep v_id)
   static std::vector<int> p2v_mapping;
