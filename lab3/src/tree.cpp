@@ -1,5 +1,4 @@
 #include "tree.h"
-
 int              Tree::u_cut_size;
 int              Tree::u_set_size;
 int              Tree::num_expansion;
@@ -440,5 +439,3 @@ int Tree::calc_solution_cut(std::vector<Partition> solution, bool print)
    assert((unsigned int)retval <= Graph::nets.size());
    return retval;
 }
-
-
