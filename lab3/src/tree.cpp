@@ -56,6 +56,7 @@ int Tree::lookahead_LB()
     std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
     for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
     {
+      std::vector<int>
       int net_idx = (*it) - 1;
       if(edge_table[net_idx].cut_state == Partition::L_ASSIGNED) {
         auto l_it = std::find(l_edges.begin(), l_edges.end(), (*it));
