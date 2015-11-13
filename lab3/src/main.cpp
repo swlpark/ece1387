@@ -122,6 +122,10 @@ Tree* branch_and_bound(Tree * a_node)
 #ifdef _DEBUG_
          std::cout << "Pruning intra-nodes; LB >= U(" << Tree::u_cut_size << ")\n";
 #endif
+         delete l_node; 
+         delete r_node; 
+         a_node->left_node = nullptr;
+         a_node->right_node = nullptr;
          return nullptr;
        }
        r_recurse = branch_and_bound(r_node);
@@ -131,16 +135,31 @@ Tree* branch_and_bound(Tree * a_node)
 #ifdef _DEBUG_
          std::cout << "Pruning intra-nodes; LB >= U(" << Tree::u_cut_size << ")\n";
 #endif
+         delete l_node; 
+         delete r_node; 
+         a_node->left_node = nullptr;
+         a_node->right_node = nullptr;
          return nullptr;
        }
        l_recurse = branch_and_bound(l_node);
        r_recurse = branch_and_bound(r_node);
      }
      if (l_recurse != nullptr && r_recurse != nullptr) {
-        if (r_recurse->cut_size < l_recurse-> cut_size)
+        if (r_recurse->cut_size < l_recurse-> cut_size) {
             retval = r_recurse;
-        else 
+            delete l_recurse;
+            l_node->left_node = nullptr;
+            l_node->right_node = nullptr;
+            delete l_node;
+            a_node->left_node = nullptr;
+        } else {
             retval = l_recurse;
+            delete r_recurse;
+            r_node->left_node = nullptr;
+            r_node->right_node = nullptr;
+            delete r_node;
+            a_node->right_node = nullptr;
+        }
      } else if (l_recurse == nullptr) {
        retval = r_recurse;
      } else if (r_recurse == nullptr) {
