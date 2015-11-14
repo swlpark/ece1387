@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -g -O0 -c -Wall -std=c++11
+CFLAGS = -g -O2 -c -Wall -std=c++11
 LDFLAGS = -g -Wall 
 EXE = a3
 

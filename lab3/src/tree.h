@@ -7,6 +7,8 @@
 #include <iostream>
 #include <algorithm>
 #include <cassert>
+#include <queue>
+#include <cmath>
 #include "graph.h"
 #include "main.h"
 

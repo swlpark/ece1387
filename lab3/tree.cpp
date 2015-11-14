@@ -70,7 +70,7 @@ int Tree::lookahead_LB()
     int l_hit = 0;
     int r_hit = 0;
     int v_idx = p2v_mapping.at(i) - 1;
-    std::vector<bool> hit_row(row_size, false);
+    std::vector<bool> hit_row(row_size);
     std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
     for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
     {
@@ -153,7 +153,7 @@ int Tree::lookahead_LB()
   //    retval += r_com;
   //  }
   //} 
-  assert(retval <= row_size);
+  //assert(retval <= row_size);
   return retval;
 }
 

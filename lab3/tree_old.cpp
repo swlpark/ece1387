@@ -30,12 +30,10 @@ int Tree::lookahead_LB()
 {
   int retval = 0;
   std::vector<int> candidate_nets;
-
   //keep a copy of candidate nets; pop once the net is considered for the LB cut
   std::list<int> l_edges;
   std::list<int> r_edges;
-
-  //mark assigned nets
+  //mark assigned
   for(unsigned int i = 0; i < edge_table.size(); ++i)
   {
     if(edge_table[i].cut_state == Partition::L_ASSIGNED) {
@@ -70,7 +68,7 @@ int Tree::lookahead_LB()
     int l_hit = 0;
     int r_hit = 0;
     int v_idx = p2v_mapping.at(i) - 1;
-    std::vector<bool> hit_row(row_size, false);
+    std::vector<bool> hit_row(row_size);
     std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
     for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
     {
@@ -81,6 +79,7 @@ int Tree::lookahead_LB()
           ++l_hit;
           int h_idx = std::distance(candidate_nets.begin(), l_it);
           hit_row[h_idx] = true;
+          //l_edges.erase(l_it);
         }
       } else if(edge_table[net_idx].cut_state == Partition::R_ASSIGNED) {
         auto r_it = std::find(candidate_nets.begin(), candidate_nets.end(), (*it));
@@ -88,6 +87,7 @@ int Tree::lookahead_LB()
           ++r_hit;
           int h_idx = std::distance(candidate_nets.begin(), r_it);
           hit_row[h_idx] = true;
+          //r_edges.erase(r_it);
         }
       } else {
         continue;
@@ -95,63 +95,69 @@ int Tree::lookahead_LB()
     }
     if (l_hit > 0 && r_hit > 0)
     {
-        //compute cuts
+      if (l_hit > r_hit) { //pick R-assigned nets to be cut
         int r_cut = 0;
         for(int i=r_edges_idx; i<row_size; i++) {
            if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
              auto h_it = std::find(r_edges.begin(), r_edges.end(), candidate_nets[i]);
-             if (h_it != r_edges.end())
+             if (h_it != r_edges.end()) {
                ++r_cut;
+               --R_allowance;
+               r_edges.erase(h_it);
+             }
            }
         }
+        //calculate L-assigned cut edges;
+        int l_cut = 0;
+        for(int i=0; i<r_edges_idx; i++) {
+           if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
+              auto a_it = std::find(l_edges.begin(), l_edges.end(), candidate_nets[i]);
+              if (a_it != l_edges.end()) {
+                ++l_cut;
+              }
+           }
+        }
+        assert(r_cut > l_cut);
+        retval += r_cut;
+      } else if (l_hit < r_hit){ //pick L-assigned nets to be cut
         int l_cut = 0;
         for(int i=0; i<r_edges_idx; i++) {
            if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
               auto h_it = std::find(l_edges.begin(), l_edges.end(), candidate_nets[i]);
-              if (h_it != l_edges.end())
+              if (h_it != l_edges.end()) {
                 ++l_cut;
+                --L_allowance;
+                l_edges.erase(h_it);
+              }
            }
         }
-        if (r_cut < l_cut) {
-          for(int i=r_edges_idx; i<row_size; i++) {
-             if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
-               auto h_it = std::find(r_edges.begin(), r_edges.end(), candidate_nets[i]);
-               if (h_it != r_edges.end())
-                 r_edges.erase(h_it);
+        int r_cut = 0;
+        for(int i=r_edges_idx; i<row_size; i++) {
+           if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
+             auto h_it = std::find(r_edges.begin(), r_edges.end(), candidate_nets[i]);
+             if (h_it != r_edges.end()) {
+               ++r_cut;
              }
-          }
-          retval += r_cut;
-          R_allowance -= r_cut;
-          r_side_under.push((l_cut - r_cut));
-        } else {
-          for(int i=0; i<r_edges_idx; i++) {
-             if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
-                auto h_it = std::find(l_edges.begin(), l_edges.end(), candidate_nets[i]);
-                if (h_it != l_edges.end())
-                  l_edges.erase(h_it);
-             }
-          }
-          retval += l_cut;
-          L_allowance -= l_cut;
-          l_side_under.push((r_cut - l_cut));
-        } 
+           }
+        }
+        assert(l_cut > r_cut);
+        retval += l_cut;
+      } else { //pick L-assigned nets to be cut, increase balance allowance
+        for(int i=0; i<r_edges_idx; i++) {
+           if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
+              auto h_it = std::find(l_edges.begin(), l_edges.end(), candidate_nets[i]);
+              if (h_it != l_edges.end()) {
+                ++retval;
+                ++balance_allowance;
+                l_edges.erase(h_it);
+              }
+           }
+        }
+      }
     }
   }
-  //compensate for cut under-estimation due to balance violation
-  //if (L_allowance < 0) {
-  //  for(int i = 0; i < abs(L_allowance); i++) {
-  //    int l_com = l_side_under.top();
-  //    assert(l_com >= 0);
-  //    l_side_under.pop();
-  //    retval += l_com;
-  //  }
-  //} else if (R_allowance < 0) {
-  //  for(int i = 0; i < abs(R_allowance); i++) {
-  //    int r_com = r_side_under.top();
-  //    assert(r_com >= 0);
-  //    r_side_under.pop();
-  //    retval += r_com;
-  //  }
+  //if ((L_allowance + balance_allowance) < 0) {
+  //} else if ((R_allowance + balance_allowance) < 0) {
   //} 
   assert(retval <= row_size);
   return retval;
