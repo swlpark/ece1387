@@ -32,8 +32,8 @@ int Tree::lookahead_LB()
   std::vector<int> candidate_nets;
 
   //keep a copy of candidate nets; pop once the net is considered for the LB cut
-  std::list<int> l_edges;
-  std::list<int> r_edges;
+  std::vector<int> l_edges;
+  std::vector<int> r_edges;
 
   //mark assigned nets
   for(unsigned int i = 0; i < edge_table.size(); ++i)
@@ -47,46 +47,52 @@ int Tree::lookahead_LB()
   candidate_nets.insert(candidate_nets.end(), l_edges.begin(), l_edges.end());
   candidate_nets.insert(candidate_nets.end(), r_edges.begin(), r_edges.end());
 
-  std::vector<std::vector<bool>> hit_table;
   std::vector<bool>              min_on_left; 
 
   int row_size = l_edges.size() + r_edges.size();
   int r_edges_idx = l_edges.size();
 
-  //Consider cases where min-cut partition cannot be chosen due to balance constraint 
-  int L_allowance = u_set_size - L_size; 
-  int R_allowance = u_set_size - R_size; 
-  int balance_allowance = 0;
+  std::vector<bool> equal_cut_nets  (row_size, false);
 
-  //store the off-amount that will be added to retval, if balance constraint is violated
-  std::priority_queue<int, std::vector<int>, std::less<int>> l_side_under;
-  std::priority_queue<int, std::vector<int>, std::less<int>> r_side_under;
-
-  //iterate over unassigned vertices
+  //lookahead over unassigned vertices
   for(unsigned int i = node_idx; i < p2v_mapping.size(); ++i)
   {
     if(l_edges.size() == 0 || r_edges.size() == 0)
        break;
     int l_hit = 0;
     int r_hit = 0;
+    int l_match = 0;
+    int r_match = 0;
     int v_idx = p2v_mapping.at(i) - 1;
-    std::vector<bool> hit_row(row_size, false);
+    std::vector<bool> hit_row  (row_size, false);
     std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
     for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
     {
       int net_idx = (*it) - 1;
       if(edge_table[net_idx].cut_state == Partition::L_ASSIGNED) {
-        auto l_it = std::find(candidate_nets.begin(), candidate_nets.end(), (*it));
-        if (l_it != candidate_nets.end()) {
+        auto c_it = std::find(candidate_nets.begin(), candidate_nets.end(), (*it));
+        auto l_it = std::find(l_edges.begin(), l_edges.end(), (*it));
+        if (c_it != candidate_nets.end()) {
+          ++l_match;
+          int m_idx = std::distance(candidate_nets.begin(), c_it);
+          match_row[m_idx] = true;
+        }
+        if (l_it != l_edges.end()) {
           ++l_hit;
-          int h_idx = std::distance(candidate_nets.begin(), l_it);
+          int h_idx = std::distance(l_edges.begin(), l_it);
           hit_row[h_idx] = true;
         }
       } else if(edge_table[net_idx].cut_state == Partition::R_ASSIGNED) {
-        auto r_it = std::find(candidate_nets.begin(), candidate_nets.end(), (*it));
-        if (r_it != candidate_nets.end()) {
+        auto c_it = std::find(candidate_nets.begin(), candidate_nets.end(), (*it));
+        auto r_it = std::find(r_edges.begin(), r_edges.end(), (*it));
+        if (c_it != candidate_nets.end()) {
+          ++r_match;
+          int m_idx = std::distance(candidate_nets.begin(), c_it);
+          match_row[m_idx] = true;
+        }
+        if (r_it != r_edges.end()) {
           ++r_hit;
-          int h_idx = std::distance(candidate_nets.begin(), r_it);
+          int h_idx = std::distance(r_edges.begin(), r_it) + r_edges_idx;
           hit_row[h_idx] = true;
         }
       } else {
@@ -95,64 +101,59 @@ int Tree::lookahead_LB()
     }
     if (l_hit > 0 && r_hit > 0)
     {
-        //compute cuts
-        int r_cut = 0;
-        for(int i=r_edges_idx; i<row_size; i++) {
-           if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
-             auto h_it = std::find(r_edges.begin(), r_edges.end(), candidate_nets[i]);
-             if (h_it != r_edges.end())
-               ++r_cut;
+       if (r_hit > l_hit) {
+         for(int i=0; i<r_edges_idx; i++) {
+           if (hit_row[i]) {
+              auto h_it = std::find(l_edges.begin(), l_edges.end(), candidate_nets[i]);
+              assert(h_it != l_edges.end());
+              *h_it = 0;
            }
-        }
-        int l_cut = 0;
-        for(int i=0; i<r_edges_idx; i++) {
-           if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
+         }
+         retval += l_hit;
+       } else if (r_hit < l_hit){
+         for(int i=r_edges_idx; i<row_size; i++) {
+            if (hit_row[i]) { 
+              auto h_it = std::find(r_edges.begin(), r_edges.end(), candidate_nets[i]);
+              assert(h_it != r_edges.end());
+              *h_it = 0;
+            }
+         }
+         retval += r_hit;
+       } else { //can further optimize...
+         for(int i=0; i<r_edges_idx; i++) {
+           if (hit_row[i]) {
               auto h_it = std::find(l_edges.begin(), l_edges.end(), candidate_nets[i]);
               if (h_it != l_edges.end())
-                ++l_cut;
+                equal_cut_nets[i] = true;
            }
-        }
-        if (r_cut < l_cut) {
-          for(int i=r_edges_idx; i<row_size; i++) {
-             if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
-               auto h_it = std::find(r_edges.begin(), r_edges.end(), candidate_nets[i]);
-               if (h_it != r_edges.end())
-                 r_edges.erase(h_it);
-             }
-          }
-          retval += r_cut;
-          R_allowance -= r_cut;
-          r_side_under.push((l_cut - r_cut));
-        } else {
-          for(int i=0; i<r_edges_idx; i++) {
-             if (hit_row[i]) { //duplicate cut check: check if hit edge in this row is still avialable to be cut
-                auto h_it = std::find(l_edges.begin(), l_edges.end(), candidate_nets[i]);
-                if (h_it != l_edges.end())
-                  l_edges.erase(h_it);
-             }
-          }
-          retval += l_cut;
-          L_allowance -= l_cut;
-          l_side_under.push((r_cut - l_cut));
-        } 
+         }
+         for(int i=r_edges_idx; i<row_size; i++) {
+            if (hit_row[i]) { 
+              auto h_it = std::find(r_edges.begin(), r_edges.end(), candidate_nets[i]);
+              if (h_it != r_edges.end())
+                equal_cut_nets[i] = true;
+            }
+         }
+       }
     }
   }
-  //compensate for cut under-estimation due to balance violation
-  //if (L_allowance < 0) {
-  //  for(int i = 0; i < abs(L_allowance); i++) {
-  //    int l_com = l_side_under.top();
-  //    assert(l_com >= 0);
-  //    l_side_under.pop();
-  //    retval += l_com;
-  //  }
-  //} else if (R_allowance < 0) {
-  //  for(int i = 0; i < abs(R_allowance); i++) {
-  //    int r_com = r_side_under.top();
-  //    assert(r_com >= 0);
-  //    r_side_under.pop();
-  //    retval += r_com;
-  //  }
-  //} 
+  int l_cut = 0;
+  for(int i=0; i<r_edges_idx; i++)
+  {
+    if (equal_cut_nets[i]) { 
+      if(l_edges[i] != 0)
+        l_cut++;
+    }
+  }
+  int r_cut = 0;
+  for(int i=r_edges_idx; i<row_size; i++)
+  {
+    if (equal_cut_nets[i]) { 
+      if(r_edges[i] != 0)
+        r_cut++;
+    }
+  }
+  retval += (l_cut < r_cut) ? l_cut : r_cut;
   assert(retval <= row_size);
   return retval;
 }
@@ -160,7 +161,7 @@ int Tree::lookahead_LB()
 int Tree::getLowerBound()
 {
   int retval = cut_size;
-  if (node_idx > 2)
+  if (node_idx > 1)
     retval += lookahead_LB();
   return retval;
 }
@@ -248,7 +249,6 @@ Tree* Tree::branchRight()
        r_node->cut_size += 1;
     }
   }
-
   r_node->node_idx += 1;
   num_expansion++;
   this->right_node = r_node;

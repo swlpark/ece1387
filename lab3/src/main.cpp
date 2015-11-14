@@ -48,6 +48,25 @@ int main(int argc, char *argv[]) {
    root.edge_table.resize(Graph::nets.size());
    Tree::set_partition_order(Graph::vertices);
 
+   //optimization assign root node to a partition
+   root.partition[0] = Partition::L_ASSIGNED;
+   root.L_size = 1;
+   int v_idx = Tree::p2v_mapping.at(0) - 1;
+   std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
+   for(auto it = adj_nets.begin(); it != adj_nets.end(); ++it )
+   {
+     int net_idx = (*it) - 1;
+     if (root.edge_table[net_idx].cut_state == Partition::FREE)
+     {
+        root.edge_table[net_idx].cut_state = Partition::L_ASSIGNED;
+     }
+     else 
+     {
+        assert(false);
+     }
+   }
+   root.node_idx += 1;
+ 
    //choose an arbitary solution
    std::vector<Partition> init_sol(Graph::vertices.size(), Partition::R_ASSIGNED);
    for(int i=0; i < Tree::u_set_size; ++i)
@@ -58,6 +77,8 @@ int main(int argc, char *argv[]) {
 
    chrono::time_point<chrono::system_clock> start, end;
    start = chrono::system_clock::now();
+
+
    Tree* opt_sol = branch_and_bound(&root);
    end = chrono::system_clock::now();
    chrono::duration<double> delta = end - start;
