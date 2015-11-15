@@ -61,8 +61,6 @@ int Tree::lookahead_LB()
        break;
     int l_hit = 0;
     int r_hit = 0;
-    int l_match = 0;
-    int r_match = 0;
     int v_idx = p2v_mapping.at(i) - 1;
     std::vector<bool> hit_row  (row_size, false);
     std::vector<int> & adj_nets = Graph::vertices[v_idx].adj_nets;
@@ -70,33 +68,19 @@ int Tree::lookahead_LB()
     {
       int net_idx = (*it) - 1;
       if(edge_table[net_idx].cut_state == Partition::L_ASSIGNED) {
-        auto c_it = std::find(candidate_nets.begin(), candidate_nets.end(), (*it));
         auto l_it = std::find(l_edges.begin(), l_edges.end(), (*it));
-        if (c_it != candidate_nets.end()) {
-          ++l_match;
-          int m_idx = std::distance(candidate_nets.begin(), c_it);
-          match_row[m_idx] = true;
-        }
         if (l_it != l_edges.end()) {
           ++l_hit;
           int h_idx = std::distance(l_edges.begin(), l_it);
           hit_row[h_idx] = true;
         }
       } else if(edge_table[net_idx].cut_state == Partition::R_ASSIGNED) {
-        auto c_it = std::find(candidate_nets.begin(), candidate_nets.end(), (*it));
         auto r_it = std::find(r_edges.begin(), r_edges.end(), (*it));
-        if (c_it != candidate_nets.end()) {
-          ++r_match;
-          int m_idx = std::distance(candidate_nets.begin(), c_it);
-          match_row[m_idx] = true;
-        }
         if (r_it != r_edges.end()) {
           ++r_hit;
           int h_idx = std::distance(r_edges.begin(), r_it) + r_edges_idx;
           hit_row[h_idx] = true;
         }
-      } else {
-        continue;
       }
     }
     if (l_hit > 0 && r_hit > 0)
