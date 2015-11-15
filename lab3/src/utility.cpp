@@ -94,7 +94,6 @@ void begin_graphics (Tree* root)
 
    root_node = root;
    lv_node_cnt.resize(Graph::vertices.size(), 0);
-   drawtree();
    event_loop(NULL, act_on_mouse_move, NULL, drawtree);   
 
    close_graphics ();
@@ -106,7 +105,7 @@ const double row_width = 1000.0;
 const double height = 1000.0;
 void drawtree (void)
 {
-   double level_step = 50.0;
+   double level_step = height / Graph::vertices.size();
    set_draw_mode(DRAW_NORMAL);
    setlinestyle (SOLID);
    setcolor (MAGENTA);

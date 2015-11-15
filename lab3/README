@@ -1,26 +1,21 @@
-#build assignment 2
+#build assignment 3
 make
 
-#Q1: print HPWL to stdout
-./ap -i cct1 > q1_cct1
-./ap -i cct2 > q1_cct2
-./ap -i cct3 > q1_cct3
+#single-threaded B&B partitioner; prints partition to stdout
+./a3 -i cct1
+./a3 -i cct2
+./a3 -i cct3
+./a3 -i cct4
 
-#Q2: perform I/O cells swaps on cct2
-./ap -c -i cct2 > q2_cct2
+#eanble graphics
+./a3 -g -i cct1
+./a3 -g -i cct2
+./a3 -g -i cct3
+./a3 -g -i cct4
 
-#Q3: perform a single pass, 4-way cell spreading, using "artificial" fixed blocks
-./ap -s -i cct1 
-./ap -s -i cct2
-./ap -s -i cct3
+#multi-threaded B&B partitioner
+./a3 -m -i cct1
+./a3 -m -i cct2
+./a3 -m -i cct3
+./a3 -m -i cct4
 
-#Optional: can speicify custom starting weight of virtual pins to observe its effects on graphics window
-./ap -s -w 4 -i cct2
-
-#Q4: perform a single pass, 4-way cell spreading, using "artificial" fixed blocks
-./ap -r -i cct2
-./ap -r -i cct3
-
-#Optional: verbose graphics mode option -v, allows to see intermediate spreading results; useful for Q4
-./ap -v -r -i cct2
-./ap -v -r -i cct3

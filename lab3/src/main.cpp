@@ -1,5 +1,6 @@
 #include "main.h"
 
+Tree* multi_branch_and_bound(Tree*);
 Tree* branch_and_bound(Tree*);
 Tree  root;
 
@@ -9,14 +10,19 @@ int main(int argc, char *argv[]) {
    string   f_name;
    char arg;
    bool opt_graphics = false;
+   bool opt_thread = false;
    cout << "Starting A3 application... \n" ;
-   while ((arg = getopt (argc, argv, "i:g")) != -1) { switch (arg) {
+   while ((arg = getopt (argc, argv, "i:gm")) != -1) { switch (arg) {
          case 'i': 
             f_name = string(optarg);
             break;
          case 'g': 
             opt_graphics = true;
             break;
+         case 'm': 
+            opt_thread = true;
+            break;
+
       }
    }
 
@@ -82,21 +88,25 @@ int main(int argc, char *argv[]) {
    start = chrono::system_clock::now();
 
    Tree::thread_count = 0;
+   Tree* opt_sol;
+   if (opt_thread)
+    opt_sol = multi_branch_and_bound(&root);
+   else
+    opt_sol = branch_and_bound(&root);
 
-   Tree* opt_sol = branch_and_bound(&root);
    end = chrono::system_clock::now();
    chrono::duration<double> delta = end - start;
-   cout << "Duration of branch-and-bound partitioning: " << delta.count() << "s\n";
 
    assert(Tree::u_cut_size == opt_sol->cut_size);
-   assert(Tree::thread_count == 4);
    Tree::calc_solution_cut(opt_sol->partition, true);
+   cout << "Duration of branch-and-bound partitioning: " << delta.count() << "s\n";
   
-   begin_graphics(&root); 
+   if (opt_graphics) 
+      begin_graphics(&root); 
 }
 
 //recursive B&B
-Tree* branch_and_bound(Tree * a_node)
+Tree* multi_branch_and_bound(Tree * a_node)
 {
    Tree *retval = nullptr;
    Tree *l_node;
@@ -139,18 +149,18 @@ Tree* branch_and_bound(Tree * a_node)
        bool fork_l = false;
        if (Tree::thread_count < 4) {
          Tree::thread_count++;
-         r_f = std::async(&branch_and_bound, r_node);
+         r_f = std::async(std::launch::async, &multi_branch_and_bound, r_node);
          fork_r = true;
        }
        if (Tree::thread_count < 4) {
          Tree::thread_count++;
-         l_f = std::async(&branch_and_bound, l_node);
+         l_f = std::async(std::launch::async, &multi_branch_and_bound, l_node);
          fork_l = true;
        }
        if (fork_r) r_recurse = r_f.get();
-       else        r_recurse = branch_and_bound(r_node);
+       else        r_recurse = multi_branch_and_bound(r_node);
        if (fork_l) l_recurse = l_f.get();
-       else        l_recurse = branch_and_bound(l_node);
+       else        l_recurse = multi_branch_and_bound(l_node);
      } else {
        if (l_node->getLowerBound() >= Tree::u_cut_size) {
          delete l_node; 
@@ -165,18 +175,96 @@ Tree* branch_and_bound(Tree * a_node)
 
        if (Tree::thread_count < 4) {
          Tree::thread_count++;
-         l_f = std::async(&branch_and_bound, l_node);
+         l_f = std::async(std::launch::async, &multi_branch_and_bound, l_node);
          fork_l = true;
        }
        if (Tree::thread_count < 4) {
          Tree::thread_count++;
-         r_f = std::async(&branch_and_bound, r_node);
+         r_f = std::async(std::launch::async, &multi_branch_and_bound, r_node);
          fork_r = true;
        }
        if (fork_l) l_recurse = l_f.get();
-       else        l_recurse = branch_and_bound(l_node);
+       else        l_recurse = multi_branch_and_bound(l_node);
        if (fork_r) r_recurse = r_f.get();
-       else        r_recurse = branch_and_bound(r_node);
+       else        r_recurse = multi_branch_and_bound(r_node);
+     }
+     if (l_recurse != nullptr && r_recurse != nullptr) {
+        if (r_recurse->cut_size < l_recurse-> cut_size) {
+            retval = r_recurse;
+            delete l_recurse;
+            l_node->left_node = nullptr;
+            l_node->right_node = nullptr;
+            delete l_node;
+            a_node->left_node = nullptr;
+        } else {
+            retval = l_recurse;
+            delete r_recurse;
+            r_node->left_node = nullptr;
+            r_node->right_node = nullptr;
+            delete r_node;
+            a_node->right_node = nullptr;
+        }
+     } else if (l_recurse == nullptr) {
+       retval = r_recurse;
+     } else if (r_recurse == nullptr) {
+       retval = l_recurse;
+     }
+   }
+
+   return retval;
+}
+
+//recursive B&B
+Tree* branch_and_bound(Tree * a_node)
+{
+   Tree *retval = nullptr;
+   Tree *l_node;
+   Tree *r_node;
+   if (a_node->isLeaf()) {
+     retval = a_node;
+     if (a_node->cut_size >= Tree::u_cut_size) {
+        retval = nullptr;
+     } else
+        Tree::u_cut_size = retval->cut_size;
+   } else if (a_node->R_size == Tree::u_set_size) {
+     retval = a_node->fillLeft();
+     if (retval->cut_size >= Tree::u_cut_size) {
+       retval = nullptr; 
+     } else 
+        Tree::u_cut_size = retval->cut_size;
+   } else if (a_node->L_size == Tree::u_set_size) {
+     retval = a_node->fillRight();
+     if (retval->cut_size >= Tree::u_cut_size) {
+       retval = nullptr; 
+     } else 
+        Tree::u_cut_size = retval->cut_size;
+   } else { //recursive Tree expansion
+     Tree *r_recurse;
+     Tree *l_recurse;
+     l_node = a_node->branchLeft();
+     r_node = a_node->branchRight();
+
+     //prune if LB is equal or greater than U
+     if (r_node->getLowerBound() < l_node->getLowerBound()) {
+       if (r_node->getLowerBound() >= Tree::u_cut_size) {
+         delete l_node; 
+         delete r_node; 
+         a_node->left_node = nullptr;
+         a_node->right_node = nullptr;
+         return nullptr;
+       }
+       r_recurse = branch_and_bound(r_node);
+       l_recurse = branch_and_bound(l_node);
+     } else {
+       if (l_node->getLowerBound() >= Tree::u_cut_size) {
+         delete l_node; 
+         delete r_node; 
+         a_node->left_node = nullptr;
+         a_node->right_node = nullptr;
+         return nullptr;
+       }
+       l_recurse = branch_and_bound(l_node);
+       r_recurse = branch_and_bound(r_node);
      }
      if (l_recurse != nullptr && r_recurse != nullptr) {
         if (r_recurse->cut_size < l_recurse-> cut_size) {
