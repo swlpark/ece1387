@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -g -O2 -c -Wall -std=c++11
-LDFLAGS = -g -Wall 
+LDFLAGS = -pthread -g -Wall 
 EXE = a3
 
 #HDR = src/graphics.h src/easygl_constants.h

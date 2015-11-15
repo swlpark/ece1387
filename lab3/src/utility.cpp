@@ -77,7 +77,6 @@ void act_on_mouse_move (float x, float y) {
 }
 
 //keep cnt of how many nodes are drawn on each level
-std::vector<int> lv_node_cnt;
 Tree * root_node;
 
 void begin_graphics (Tree* root)
@@ -93,12 +92,10 @@ void begin_graphics (Tree* root)
    update_message(disp_str);
 
    root_node = root;
-   lv_node_cnt.resize(Graph::vertices.size(), 0);
    event_loop(NULL, act_on_mouse_move, NULL, drawtree);   
 
    close_graphics ();
    std::cout << "Graphics closed down.\n";
-   t_bound_box old_coords = get_visible_world(); //save the current view for later
 }
 
 const double row_width = 1000.0;
@@ -128,9 +125,6 @@ void drawtree (void)
         step_width /= 2;
      }
      double init_offset = step_width / 2;
-
-     int rank = lv_node_cnt[level];
-     lv_node_cnt[level] += 1;
 
      if (node != nullptr) {
         t_point node_pt = t_point(x_pos, height-(level*level_step));
