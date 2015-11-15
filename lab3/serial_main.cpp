@@ -91,8 +91,7 @@ int main(int argc, char *argv[]) {
    assert(Tree::u_cut_size == opt_sol->cut_size);
    assert(Tree::thread_count == 4);
    Tree::calc_solution_cut(opt_sol->partition, true);
-  
-   begin_graphics(&root); 
+   
 }
 
 //recursive B&B
@@ -134,23 +133,16 @@ Tree* branch_and_bound(Tree * a_node)
          a_node->right_node = nullptr;
          return nullptr;
        }
-       std::future<Tree*> r_f, l_f;
-       bool fork_r = false;
-       bool fork_l = false;
        if (Tree::thread_count < 4) {
          Tree::thread_count++;
-         r_f = std::async(&branch_and_bound, r_node);
-         fork_r = true;
-       }
+         r_recurse = branch_and_bound(r_node);
+       } else 
+         r_recurse = branch_and_bound(r_node);
        if (Tree::thread_count < 4) {
          Tree::thread_count++;
-         l_f = std::async(&branch_and_bound, l_node);
-         fork_l = true;
-       }
-       if (fork_r) r_recurse = r_f.get();
-       else        r_recurse = branch_and_bound(r_node);
-       if (fork_l) l_recurse = l_f.get();
-       else        l_recurse = branch_and_bound(l_node);
+         l_recurse = branch_and_bound(l_node);
+       } else
+         l_recurse = branch_and_bound(l_node);
      } else {
        if (l_node->getLowerBound() >= Tree::u_cut_size) {
          delete l_node; 
@@ -159,24 +151,16 @@ Tree* branch_and_bound(Tree * a_node)
          a_node->right_node = nullptr;
          return nullptr;
        }
-       std::future<Tree*> r_f, l_f;
-       bool fork_r = false;
-       bool fork_l = false;
-
        if (Tree::thread_count < 4) {
          Tree::thread_count++;
-         l_f = std::async(&branch_and_bound, l_node);
-         fork_l = true;
-       }
+         l_recurse = branch_and_bound(l_node);
+       } else 
+         l_recurse = branch_and_bound(l_node);
        if (Tree::thread_count < 4) {
          Tree::thread_count++;
-         r_f = std::async(&branch_and_bound, r_node);
-         fork_r = true;
-       }
-       if (fork_l) l_recurse = l_f.get();
-       else        l_recurse = branch_and_bound(l_node);
-       if (fork_r) r_recurse = r_f.get();
-       else        r_recurse = branch_and_bound(r_node);
+         r_recurse = branch_and_bound(r_node);
+       } else
+         r_recurse = branch_and_bound(r_node);
      }
      if (l_recurse != nullptr && r_recurse != nullptr) {
         if (r_recurse->cut_size < l_recurse-> cut_size) {
