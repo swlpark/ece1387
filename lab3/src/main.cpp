@@ -70,8 +70,7 @@ int main(int argc, char *argv[]) {
    }
    //#endif
   
- 
-   //choose an arbitary solution
+   //set an initial solution
    std::vector<Partition> init_sol(Graph::vertices.size(), Partition::R_ASSIGNED);
    for(int i=0; i < Tree::u_set_size; ++i)
    {
@@ -82,6 +81,7 @@ int main(int argc, char *argv[]) {
    chrono::time_point<chrono::system_clock> start, end;
    start = chrono::system_clock::now();
 
+   Tree::thread_count = 0;
 
    Tree* opt_sol = branch_and_bound(&root);
    end = chrono::system_clock::now();
@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
    cout << "Duration of branch-and-bound partitioning: " << delta.count() << "s\n";
 
    assert(Tree::u_cut_size == opt_sol->cut_size);
+   assert(Tree::thread_count == 4);
    Tree::calc_solution_cut(opt_sol->partition, true);
    
 }
@@ -101,37 +102,19 @@ Tree* branch_and_bound(Tree * a_node)
    Tree *r_node;
    if (a_node->isLeaf()) {
      retval = a_node;
-#ifdef _DEBUG_
-     a_node->printNode();
-#endif
      if (a_node->cut_size >= Tree::u_cut_size) {
-#ifdef _DEBUG_
-        std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
-#endif
         retval = nullptr;
      } else
         Tree::u_cut_size = retval->cut_size;
    } else if (a_node->R_size == Tree::u_set_size) {
      retval = a_node->fillLeft();
-#ifdef _DEBUG_
-     retval->printNode();
-#endif
      if (retval->cut_size >= Tree::u_cut_size) {
-#ifdef _DEBUG_
-       std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
-#endif
        retval = nullptr; 
      } else 
         Tree::u_cut_size = retval->cut_size;
    } else if (a_node->L_size == Tree::u_set_size) {
      retval = a_node->fillRight();
-#ifdef _DEBUG_
-     retval->printNode();
-#endif
      if (retval->cut_size >= Tree::u_cut_size) {
-#ifdef _DEBUG_
-       std::cout << "Pruning a Leaf node; cut_size >= U(" << Tree::u_cut_size << ")\n";
-#endif
        retval = nullptr; 
      } else 
         Tree::u_cut_size = retval->cut_size;
@@ -144,30 +127,44 @@ Tree* branch_and_bound(Tree * a_node)
      //prune if LB is equal or greater than U
      if (r_node->getLowerBound() < l_node->getLowerBound()) {
        if (r_node->getLowerBound() >= Tree::u_cut_size) {
-#ifdef _DEBUG_
-         std::cout << "Pruning intra-nodes; LB >= U(" << Tree::u_cut_size << ")\n";
-#endif
          delete l_node; 
          delete r_node; 
          a_node->left_node = nullptr;
          a_node->right_node = nullptr;
          return nullptr;
        }
-       r_recurse = branch_and_bound(r_node);
-       l_recurse = branch_and_bound(l_node);
+       if (Tree::thread_count < 4) {
+         Tree::thread_count++;
+         auto r_f = std::async(&branch_and_bound, r_node);
+         r_recurse = r_f.get();
+       } else 
+         r_recurse = branch_and_bound(r_node);
+       if (Tree::thread_count < 4) {
+         Tree::thread_count++;
+         auto l_f = std::async(&branch_and_bound, l_node);
+         l_recurse = l_f.get();
+       } else
+         l_recurse = branch_and_bound(l_node);
      } else {
        if (l_node->getLowerBound() >= Tree::u_cut_size) {
-#ifdef _DEBUG_
-         std::cout << "Pruning intra-nodes; LB >= U(" << Tree::u_cut_size << ")\n";
-#endif
          delete l_node; 
          delete r_node; 
          a_node->left_node = nullptr;
          a_node->right_node = nullptr;
          return nullptr;
        }
-       l_recurse = branch_and_bound(l_node);
-       r_recurse = branch_and_bound(r_node);
+       if (Tree::thread_count < 4) {
+         Tree::thread_count++;
+         auto l_f = std::async(&branch_and_bound, l_node);
+         l_recurse = l_f.get();
+       } else 
+         l_recurse = branch_and_bound(l_node);
+       if (Tree::thread_count < 4) {
+         Tree::thread_count++;
+         auto r_f = std::async(&branch_and_bound, r_node);
+         r_recurse = r_f.get();
+       } else
+         r_recurse = branch_and_bound(r_node);
      }
      if (l_recurse != nullptr && r_recurse != nullptr) {
         if (r_recurse->cut_size < l_recurse-> cut_size) {

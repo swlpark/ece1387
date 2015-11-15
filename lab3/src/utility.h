@@ -11,9 +11,9 @@
 #include <iterator>
 #include <utility>
 #include <unordered_set>
+#include "tree.h"
 #include "graph.h"
 #include "graphics.h"
-#include "main.h"
 
 template<typename T>
 void
@@ -53,11 +53,12 @@ namespace std {
     }
   };
 }
+struct Tree;
 
 //graphics related
 void parse_test_file           (std::string);
-void begin_graphics            (void);
-void drawscreen                (void);
+void begin_graphics            (Tree*);
+void drawtree                  (void);
 
 #endif
 

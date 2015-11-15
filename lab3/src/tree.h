@@ -9,6 +9,8 @@
 #include <cassert>
 #include <queue>
 #include <cmath>
+#include <thread>
+#include <atomic>
 #include "graph.h"
 #include "main.h"
 
@@ -50,8 +52,11 @@ struct Tree
   Tree* fillLeft();
   Tree* fillRight();
 
+  static std::atomic<int> thread_count;
+
   //current best solution's cut size
-  static int u_cut_size;
+  static std::atomic<int> u_cut_size;
+
   //balance constraint
   static int u_set_size;
 

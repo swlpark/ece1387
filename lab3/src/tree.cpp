@@ -1,5 +1,6 @@
 #include "tree.h"
-int              Tree::u_cut_size;
+std::atomic<int> Tree::thread_count;
+std::atomic<int> Tree::u_cut_size;
 int              Tree::u_set_size;
 int              Tree::num_expansion;
 std::vector<int> Tree::p2v_mapping;

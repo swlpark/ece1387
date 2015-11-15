@@ -1,18 +1,5 @@
 #include "utility.h"
 
-//*****************************************************************************
-//* sort cartesian points (v_id, x_pos, y_pos) across x dim, and then by y dim 
-//* dividing them across 4 quadrants
-//*****************************************************************************
-//void sort_by_k(std::vector<std::tuple<int, double, double>> & points)
-//{
-//   std::sort(points.begin(), points.end(), sort_by_x());
-//   auto m_it = points.begin() + (points.size() / 2);
-//   std::sort(points.begin(), m_it, sort_by_y());
-//   std::sort(m_it, points.end(), sort_by_y());
-//   return;
-//}
-
 //**************************************************************************
 //*file I/O: parse input file, set vertices & nets
 //**************************************************************************
@@ -83,7 +70,11 @@ void parse_test_file(std::string f_name)
    cout << "Okay: finished parsing the input file : " << f_name << "\n"; 
 }
 
-void begin_graphics (void)
+//keep cnt of how many nodes are drawn on each level
+std::vector<int> lv_node_cnt;
+Tree * root_node;
+
+void begin_graphics (Tree* root)
 {
    t_bound_box initial_coords = t_bound_box(0,0,100,100);
 
@@ -95,8 +86,9 @@ void begin_graphics (void)
    std::string disp_str = str_buf.str();
    update_message(disp_str);
 
-   
-   event_loop(NULL, NULL, NULL, drawscreen);   
+   root_node = root;
+   lv_node_cnt.resize(Graph::vertices.size(), 0);
+   event_loop(NULL, NULL, NULL, drawtree);   
    //if(!created_button) {
    //  create_button ("Window", "Toggle Lines", act_on_toggle_nets_button); // name is UTF-8
    //  created_button = true;
@@ -104,8 +96,52 @@ void begin_graphics (void)
    t_bound_box old_coords = get_visible_world(); //save the current view for later
 }
 
-void drawscreen (void)
+void drawtree (void)
 {
+   double row_width = 100.0;
+   double level_step = 5.0;
+
    set_draw_mode(DRAW_NORMAL);
    clearscreen();
+
+   std::list<std::pair<Tree*, int>> queue;
+   queue.push_back(std::pair<Tree*, int>(root_node, 0));
+
+   while(!queue.empty())
+   {
+     Tree* node = queue.front().first;
+     int level = queue.front().second;
+     queue.pop_front();
+     double step_width = row_width;
+     for(int i=0; i<level; i++) {
+        step_width /= 2;
+     }
+     double init_offset = step_width / 2;
+
+     int rank = lv_node_cnt[level];
+     lv_node_cnt[level] += 1;     
+
+     if (node != nullptr) {
+        t_point node_pt = t_point(init_offset + (rank * step_width), level*level_step);
+        t_bound_box node_rect = t_bound_box(node_pt, 0.6, 0.6);
+
+        //if (node->partition[node->node_idx].cut_state == Partition::L_ASSIGNED)
+        //  setcolor(RED);
+        //else
+        setcolor(BLUE);
+        fillrect(node_rect);
+
+        if(node->left_node != nullptr) {
+          queue.push_back(std::pair<Tree*, int>(node->left_node, level+1));
+        } else {
+          //queue.push_back(std::pair<Tree*, int>(nullptr, level+1));
+        }
+
+        if (node->right_node != nullptr) {
+          queue.push_back(std::pair<Tree*, int>(node->right_node, level+1));
+        } else {
+          //queue.push_back(std::pair<Tree*, int>(nullptr, level+1));
+        }
+     }
+   }
 }

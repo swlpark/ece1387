@@ -18,9 +18,9 @@
 #include <ctime>
 #include <cmath>
 #include <random>
+#include <future>
 #include "graph.h"
 #include "tree.h"
 #include "utility.h"
 
-//extern std::vector<Graph> vertices; 
 #endif
