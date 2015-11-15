@@ -133,7 +133,7 @@ int Tree::lookahead_LB()
   for(int i=r_edges_idx; i<row_size; i++)
   {
     if (equal_cut_nets[i]) { 
-      if(r_edges[i] != 0)
+      if(r_edges[(i - r_edges_idx)] != 0)
         r_cut++;
     }
   }

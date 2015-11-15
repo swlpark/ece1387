@@ -55,8 +55,9 @@ namespace std {
 }
 
 //graphics related
-void begin_graphics            (void);
 void parse_test_file           (std::string);
+void begin_graphics            (void);
+void drawscreen                (void);
 
 #endif
 

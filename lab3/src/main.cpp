@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
    root.edge_table.resize(Graph::nets.size());
    Tree::set_partition_order(Graph::vertices);
 
-   //optimization assign root node to a partition
+   //optimization: assign root node to a partition
    root.partition[0] = Partition::L_ASSIGNED;
    root.L_size = 1;
    int v_idx = Tree::p2v_mapping.at(0) - 1;

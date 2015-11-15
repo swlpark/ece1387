@@ -82,3 +82,30 @@ void parse_test_file(std::string f_name)
    in_file.close();
    cout << "Okay: finished parsing the input file : " << f_name << "\n"; 
 }
+
+void begin_graphics (void)
+{
+   t_bound_box initial_coords = t_bound_box(0,0,100,100);
+
+   init_graphics("Branch and Bound - Progression View", WHITE);
+   set_visible_world(initial_coords);
+
+   std::ostringstream str_buf;
+   str_buf << Graph::vertices.size() << " vertices connected with " << Graph::nets.size() << " nets";
+   std::string disp_str = str_buf.str();
+   update_message(disp_str);
+
+   
+   event_loop(NULL, NULL, NULL, drawscreen);   
+   //if(!created_button) {
+   //  create_button ("Window", "Toggle Lines", act_on_toggle_nets_button); // name is UTF-8
+   //  created_button = true;
+   //}
+   t_bound_box old_coords = get_visible_world(); //save the current view for later
+}
+
+void drawscreen (void)
+{
+   set_draw_mode(DRAW_NORMAL);
+   clearscreen();
+}
