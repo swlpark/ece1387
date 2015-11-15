@@ -33,12 +33,6 @@ int main(int argc, char *argv[]) {
         Graph::vertices[v_idx].addEdge(net_id);
       }
    }
-//#ifdef _DEBUG_
-   for(auto i = Graph::vertices.begin(); i != Graph::vertices.end(); ++i)
-   {
-      (*i).printVertex();
-   }
-//#endif
    //even number of vertices
    assert((Graph::vertices.size() % 2) == 0);
 
@@ -66,6 +60,16 @@ int main(int argc, char *argv[]) {
      }
    }
    root.node_idx += 1;
+
+   std::vector<int> v_dist_sorted =Graph::vertices[(Tree::p2v_mapping[0]-1)].BFS();
+
+   //#ifdef _DEBUG_
+   for(auto i = Graph::vertices.begin(); i != Graph::vertices.end(); ++i)
+   {
+      (*i).printVertex();
+   }
+   //#endif
+  
  
    //choose an arbitary solution
    std::vector<Partition> init_sol(Graph::vertices.size(), Partition::R_ASSIGNED);

@@ -7,30 +7,41 @@ Graph::Graph() : v_id(0), v_dist(-1), assigned(false), adj_nets()
 {
 }
 
-void Graph::BFS()
+/*
+* Annotate each vertex with minimum distance from the this node,
+* return a vector of nodes sorted in BFS sorted order.
+*/
+std::vector<int> Graph::BFS()
 {
+  std::vector<int> retval;
+
   v_dist = 0;
   std::list<int> queue;
   queue.push_back((this->v_id - 1));
-  int node_idx;
+  retval.push_back(v_id);
+  int idx;
   while(!queue.empty()) 
   {
-     node_idx = queue.front(); 
+     idx = queue.front(); 
      queue.pop_front(); 
-     for(auto it = vertices[node_idx].adj_nets.begin(); it != vertices[node_idx].adj_nets.end(); it++) 
+     for(auto it = vertices[idx].adj_nets.begin(); it != vertices[idx].adj_nets.end(); it++) 
      {
         int net_idx = (*it) - 1;
         //vertices connected by the net
         for(unsigned int i=0; i < nets.at(net_idx).size();++i)
         {
            int adj_idx = nets[net_idx][i] - 1;
-           if (vertices[adj_idx].v_dist < 0) {
-             vertices[adj_idx].v_dist = vertices[node_idx].v_dist + 1;
+
+           if (vertices[adj_idx].v_dist == -1) {
+             vertices[adj_idx].v_dist = vertices[idx].v_dist + 1;
              queue.push_back(adj_idx);
+             retval.push_back(adj_idx + 1);
            }
         }
      }
   }
+  assert(retval.size() == vertices.size());
+  return retval;
 }
 
 void Graph::addEdge(int a_id)

@@ -18,7 +18,7 @@ struct Graph
   Graph();
   void addEdge(int);
   void printVertex();
-  void BFS();
+  std::vector<int> BFS();
 
   static std::vector<Graph> vertices;
   static std::vector<std::vector<int>> nets;
