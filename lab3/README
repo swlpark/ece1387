@@ -13,7 +13,7 @@ make
 ./a3 -g -i cct3
 ./a3 -g -i cct4
 
-#multi-threaded B&B partitioner
+#multi-threaded B&B partitioner (spawns 4 threads)
 ./a3 -m -i cct1
 ./a3 -m -i cct2
 ./a3 -m -i cct3
